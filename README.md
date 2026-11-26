@@ -92,7 +92,8 @@ a dbt dependency has very long file names and `pip install` fails otherwise.
 With [uv](https://docs.astral.sh/uv/): `uv venv --python 3.12`, then
 `uv pip install -r requirements.txt`. With make: `make setup run`.
 
-Then open `reports/energy_outlook.html`. A full run takes about 20 seconds.
+Then open `reports/energy_outlook.html`, or add `--open` to the run command to open it in your
+browser when the run succeeds. A full run takes about 20 seconds.
 
 | Command (`python -m pipeline …`) | What it does |
 |---|---|
@@ -100,6 +101,7 @@ Then open `reports/energy_outlook.html`. A full run takes about 20 seconds.
 | `sample` | The same, offline, from recorded API responses (output in `reports/sample/`) |
 | `extract`, `load`, `build`, `report` | One step |
 | `docs` | dbt docs with lineage, as one file: `dbt/target/static_index.html` |
+| `--open` (with `run`, `sample`, `report` or `docs`) | Open the resulting page in your browser, only if every step succeeded |
 
 Python tests: `python -m pytest -q` (no network needed).
 
