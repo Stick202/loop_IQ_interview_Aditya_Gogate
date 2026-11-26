@@ -6,8 +6,6 @@ import json
 import logging
 from pathlib import Path
 
-import duckdb
-
 from . import config
 
 log = logging.getLogger(__name__)
@@ -33,10 +31,8 @@ create table if not exists bronze.raw_open_meteo (
 def load(landing: Path | None = None, warehouse: Path | None = None) -> int:
     """Load landed files not yet in Bronze; returns the number of new rows."""
     landing = landing or config.landing_dir()
-    warehouse = warehouse or config.warehouse_path()
-    warehouse.parent.mkdir(parents=True, exist_ok=True)
     new = 0
-    with duckdb.connect(str(warehouse)) as con:
+    with config.connect(warehouse) as con:
         con.execute(DDL)
         known = set(con.execute(
             "select source_file from bronze.raw_open_meteo").fetchall())
