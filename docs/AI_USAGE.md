@@ -25,7 +25,11 @@ The brief I gave, with the assignment PDF attached:
 | Ingestion | Python with requests, or httpx with retries |
 | Warehouse | DuckDB: a single file, no server, nothing beyond pip |
 | Transformations | dbt-duckdb for Silver and Gold, with tests and docs |
-| Orchestration | A simple Makefile or a small Python runner; Dagster or Prefect only as a bonus |
+| Orchestration | A simple Makefile or a small Python runner;
+
+
+<img width="1063" height="342" alt="image" src="https://github.com/user-attachments/assets/8ddb0379-c9cd-43eb-951a-11dbd3c546e3" />
+
 
 ## 2. How each instruction was met
 
