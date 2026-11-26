@@ -134,7 +134,7 @@ def _dbt_vars() -> dict:
 def report() -> Path:
     out = config.reports_dir()
     out.mkdir(parents=True, exist_ok=True)
-    with duckdb.connect(str(config.warehouse_path()), read_only=True) as con:
+    with config.connect(read_only=True) as con:
         context = build_context(con)
         for name, sql in EXTRACTS.items():
             target = (out / f"{name}.csv").as_posix().replace("'", "''")

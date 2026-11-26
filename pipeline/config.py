@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import duckdb
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -19,6 +20,14 @@ def landing_dir() -> Path:
 
 def warehouse_path() -> Path:
     return Path(os.environ.get("WAREHOUSE_PATH", ROOT / "data" / "warehouse.duckdb"))
+
+
+def connect(path: Path | None = None, read_only: bool = False) -> duckdb.DuckDBPyConnection:
+    """Open the warehouse. Use as a context manager so the file is released."""
+    path = path or warehouse_path()
+    if not read_only:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    return duckdb.connect(str(path), read_only=read_only)
 
 
 def reports_dir() -> Path:

@@ -1,7 +1,6 @@
 """Extract atomicity, load idempotency, and a full offline run on recorded responses."""
 import json
 
-import duckdb
 import httpx
 import pytest
 
@@ -56,7 +55,7 @@ def test_end_to_end_in_one_process_on_recorded_responses(tmp_path, monkeypatch):
     for name in ("load", "build", "report"):
         cli.step(name)
 
-    with duckdb.connect(str(tmp_path / "w.duckdb"), read_only=True) as con:
+    with config.connect(tmp_path / "w.duckdb", read_only=True) as con:
         rows, cities = con.execute(
             "select count(*), count(distinct location_id) from silver.silver_hourly_weather"
         ).fetchone()
