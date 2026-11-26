@@ -186,7 +186,8 @@ ones after it. Beyond keys, ranges and relationships:
 
 ## AI use
 
-Built with Claude Code. Screenshots of the conversations are in
-[docs/ai-evidence/](docs/ai-evidence/).
+Built with Claude Code. [docs/AI_USAGE.md](docs/AI_USAGE.md) covers how the brief became
+the code, what the AI found and fixed, and which assumptions are mine to defend. Screenshots
+of the conversations are in [docs/ai-evidence/](docs/ai-evidence/).
 
 Weather data by [Open-Meteo.com](https://open-meteo.com/), CC BY 4.0.
