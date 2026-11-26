@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: silver_hourly_weather
+    description: >
+      One typed row per location and UTC hour, from the newest forecast. Radiation is
+      the mean of the hour ending at valid_at; wind and temperature are instantaneous.
+    data_tests:
+      - unique_grain:
+          arguments: {columns: [location_id, valid_at_utc]}
+    columns:
+      - name: location_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('locations'), field: location_id}
+      - name: valid_at_utc
+        data_tests: [not_null]
+      - name: local_date
+        data_tests: [not_null]
+      - name: ghi_wm2
+        data_tests:
+          - in_range:
+              arguments: {min_value: 0, max_value: 1400}
+      - name: gti_wm2
+        data_tests:
+          - in_range:
+              arguments: {min_value: 0, max_value: 1600}
+      - name: temperature_2m_c
+        data_tests:
+          - in_range:
+              arguments: {min_value: -30, max_value: 55}
+      - name: surface_pressure_hpa
+        data_tests:
+          - in_range:
+              arguments: {min_value: 850, max_value: 1080}
+      - name: wind_speed_100m_ms
+        description: Not in Open-Meteo's published variable list; tracks the 80/120 m midpoint.
+        data_tests:
+          - in_range:
+              arguments: {min_value: 0, max_value: 75}
+      - name: wind_speed_200m_ms
+        description: Not in the published variable list; ends about a day before the other heights.
+        data_tests:
+          - in_range:
+              arguments: {min_value: 0, max_value: 90}
+
+  - name: silver_daily_weather
+    description: One typed row per location and local date, as aggregated by the API.
+    data_tests:
+      - unique_grain:
+          arguments: {columns: [location_id, local_date]}
+    columns:
+      - name: location_id
+        data_tests: [not_null]
+      - name: local_date
+        data_tests: [not_null]
+      - name: sunshine_hours
+        data_tests:
+          - in_range:
+              arguments: {min_value: 0, max_value: 24}
+
+unit_tests:
+  - name: newest_forecast_wins_and_empty_hours_are_dropped
+    model: silver_hourly_weather
+    given:
+      - input: ref('locations')
+        rows:
+          - {location_id: adelaide, timezone: Australia/Adelaide}
+      - input: source('bronze', 'raw_open_meteo')
+        format: sql
+        rows: |
+          select 'r1' as run_id, 'hourly' as endpoint, 'adelaide' as location_id,
+                 timestamptz '2026-11-25 00:00:00+00' as retrieved_at,
+                 '{"hourly":{"time":[1795615200,1795618800],"temperature_2m":[10,11],"surface_pressure":[1000,1000],"cloud_cover":[0,0],"shortwave_radiation":[0,0],"direct_normal_irradiance":[0,0],"diffuse_radiation":[0,0],"global_tilted_irradiance":[0,0],"wind_speed_10m":[1,1],"wind_speed_80m":[1,1],"wind_speed_100m":[1,1],"wind_speed_120m":[1,1],"wind_speed_200m":[1,1],"wind_direction_100m":[0,0],"wind_gusts_10m":[1,1]}}'::json as payload
+          union all
+          select 'r2', 'hourly', 'adelaide', timestamptz '2026-11-25 06:00:00+00',
+                 '{"hourly":{"time":[1795615200,1795618800],"temperature_2m":[20,null],"surface_pressure":[1000,null],"cloud_cover":[0,null],"shortwave_radiation":[0,null],"direct_normal_irradiance":[0,null],"diffuse_radiation":[0,null],"global_tilted_irradiance":[0,null],"wind_speed_10m":[1,null],"wind_speed_80m":[1,null],"wind_speed_100m":[1,null],"wind_speed_120m":[1,null],"wind_speed_200m":[1,null],"wind_direction_100m":[0,null],"wind_gusts_10m":[1,null]}}'::json
+    expect:
+      # 14:00 UTC is 00:30 in Adelaide (UTC+10:30), already the next local day
+      rows:
+        - {run_id: r2, valid_at_utc: "2026-11-25 14:00:00", valid_at_local: "2026-11-26 00:30:00", local_date: "2026-11-26", temperature_2m_c: 20}
+        - {run_id: r1, valid_at_utc: "2026-11-25 15:00:00", valid_at_local: "2026-11-26 01:30:00", local_date: "2026-11-26", temperature_2m_c: 11}

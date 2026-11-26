@@ -1,0 +1,43 @@
+name: open_meteo
+version: "1.0.0"
+config-version: 2
+profile: open_meteo
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+models:
+  open_meteo:
+    +materialized: table
+    silver:
+      +schema: silver
+    gold:
+      +schema: gold
+
+seeds:
+  open_meteo:
+    +schema: reference
+
+vars:
+  # Solar: PV yield per kWp installed
+  pv_system_efficiency: 0.86      # 14% losses: wiring, soiling, inverter (PVWatts default)
+  pv_temp_coefficient: -0.0035    # power change per degC of cell temperature above 25
+  pv_noct: 45                     # nominal operating cell temperature, degC
+
+  # Wind: generic utility turbine, m/s
+  wind_cut_in: 3.0
+  wind_rated: 12.0
+  wind_cut_out: 25.0
+
+  # Supply risk score. A day at or above both references scores 0 on those parts.
+  risk_pv_reference: 5.0          # kWh/kWp/day
+  risk_wind_cf_reference: 0.35    # 100 m capacity factor
+  risk_gust_floor: 17.0           # m/s, gale force: gust part starts
+  risk_gust_ceiling: 28.0         # m/s, storm force: gust part is full
+  risk_weight_solar: 45
+  risk_weight_wind: 45
+  risk_weight_gust: 10
+  risk_band_moderate: 35
+  risk_band_high: 60

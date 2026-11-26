@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar and Wind Outlook</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f9; --surface: #ffffff; --ink: #191919; --ink-2: #666666;
+  --grid: #e7e7e7; --axis: #c2c2c2; --ring: rgba(11,11,11,.10);
+  --wind: #257de0; --wind-soft: #84b9f3; --solar: #f47230;
+  --low: #0aac23; --moderate: #fbb315; --high: #dc3c3d;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0b0b0b; --surface: #191919; --ink: #efefef; --ink-2: #9c9c9c;
+    --grid: #303030; --axis: #474747; --ring: rgba(255,255,255,.10);
+    --wind: #338ced; --wind-soft: #1757ac; --solar: #e76624;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0 0 4px; }
+h2 { font-size: 18px; margin: 0 0 4px; }
+p { margin: 0 0 12px; max-width: 72ch; }
+.sub { color: var(--ink-2); }
+section { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px;
+  padding: 20px; margin-top: 20px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;
+  margin-top: 22px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 16px; }
+.tile b { display: block; font-size: 26px; font-weight: 600; line-height: 1.25; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 14px; }
+th, td { padding: 7px 10px; text-align: right; white-space: nowrap; }
+th { color: var(--ink-2); font-weight: 500; font-size: 13px; }
+th:first-child, td:first-child { text-align: left; }
+tbody tr + tr td { border-top: 1px solid var(--grid); }
+.barcell { width: 46%; min-width: 220px; text-align: left; }
+.bar { height: 14px; border-radius: 0 4px 4px 0; }
+.bar + .bar { margin-top: 2px; }
+.heat { border-collapse: separate; border-spacing: 2px; }
+.heat td, .heat th { padding: 6px 5px; font-size: 13px; text-align: center; }
+.heat tbody tr + tr td { border-top: 0; }
+.heat td:first-child { position: sticky; left: 0; background: var(--surface); padding-right: 12px; }
+.heat td.cell { border-radius: 4px; min-width: 46px; }
+.heat td.cell:hover, .heat td.cell:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
+.heat .conf { font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink-2); font-size: 13px; margin: 0 0 10px; }
+.legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 6px; }
+.legend i.line { height: 3px; vertical-align: middle; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+.panel h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.panel svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+svg text { fill: var(--ink-2); font-size: 10px; font-variant-numeric: tabular-nums; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--ring);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18); border-radius: 6px; padding: 8px 10px; font-size: 13px;
+  white-space: pre-line; display: none; z-index: 5; }
+details summary { cursor: pointer; font-weight: 600; }
+details .scroll { margin-top: 12px; max-height: 460px; overflow: auto; }
+ul { margin: 8px 0 0; padding-left: 20px; } li { margin-bottom: 6px; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+<h1>Solar and wind outlook</h1>
+<p class="sub">6 cities, 26 Nov to 10 Dec 2026 (15 complete local days).
+Open-Meteo forecast retrieved 25 Nov 2026 22:24 UTC.</p>
+
+<div class="tiles">
+  <div class="tile"><span>Best solar yield</span><b>Perth</b>
+    <span>5.9 kWh per kWp a day</span></div>
+  <div class="tile"><span>Best wind at 100 m</span><b>Sydney</b>
+    <span>20% capacity factor, 35% at 200 m</span></div>
+  <div class="tile"><span>200 m against 100 m</span><b>+75%</b>
+    <span>wind output, all cities, 14 matched days</span></div>
+  <div class="tile"><span>Highest supply risk</span><b>Melbourne, 27 Nov</b>
+    <span>score 66 of 100, high forecast confidence</span></div>
+</div>
+
+<section>
+  <h2>Solar yield potential</h2>
+  <p class="sub">Average daily PV yield per kWp, from irradiance on a north-facing panel tilted near latitude (GTI).
+GTI is below GHI in every city: the sun is high at this time of year, so a flatter panel would collect more.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>City</th><th class="barcell">PV yield</th><th>kWh/kWp/day</th><th>GHI kWh/m²/day</th><th>GTI kWh/m²/day</th><th>Tilt</th></tr></thead>
+    <tbody>      <tr><td>Perth</td>
+        <td class="barcell"><div class="bar" style="width:100.0%;background:var(--solar)"></div></td>
+        <td>5.91</td><td>8.57</td><td>7.49</td><td>32°</td></tr>
+      <tr><td>Adelaide</td>
+        <td class="barcell"><div class="bar" style="width:86.3%;background:var(--solar)"></div></td>
+        <td>5.10</td><td>7.23</td><td>6.37</td><td>35°</td></tr>
+      <tr><td>Auckland</td>
+        <td class="barcell"><div class="bar" style="width:83.3%;background:var(--solar)"></div></td>
+        <td>4.92</td><td>6.87</td><td>6.04</td><td>37°</td></tr>
+      <tr><td>Sydney</td>
+        <td class="barcell"><div class="bar" style="width:82.7%;background:var(--solar)"></div></td>
+        <td>4.88</td><td>6.89</td><td>6.12</td><td>34°</td></tr>
+      <tr><td>Brisbane</td>
+        <td class="barcell"><div class="bar" style="width:81.1%;background:var(--solar)"></div></td>
+        <td>4.79</td><td>6.69</td><td>6.00</td><td>27°</td></tr>
+      <tr><td>Melbourne</td>
+        <td class="barcell"><div class="bar" style="width:75.4%;background:var(--solar)"></div></td>
+        <td>4.45</td><td>6.22</td><td>5.49</td><td>38°</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+  <h2>Wind potential at 100 m and 200 m</h2>
+  <p class="sub">Capacity factor of a generic turbine, and the power in the wind per m² of rotor.
+  Both heights use the same 14 days, because the 200 m forecast ends earlier.</p>
+  <div class="legend"><span><i style="background:var(--wind-soft)"></i>100 m</span><span><i style="background:var(--wind)"></i>200 m</span></div>
+  <div class="scroll"><table>
+    <thead><tr><th>City</th><th class="barcell">Capacity factor</th><th>100 m</th><th>200 m</th><th>W/m² 100 m</th><th>W/m² 200 m</th></tr></thead>
+    <tbody>      <tr><td>Sydney</td>
+        <td class="barcell"><div class="bar" style="width:55.7%;background:var(--wind-soft)"></div>
+          <div class="bar" style="width:100.0%;background:var(--wind)"></div></td>
+        <td>20%</td><td>35%</td>
+        <td>221</td><td>414</td></tr>
+      <tr><td>Perth</td>
+        <td class="barcell"><div class="bar" style="width:54.6%;background:var(--wind-soft)"></div>
+          <div class="bar" style="width:99.5%;background:var(--wind)"></div></td>
+        <td>19%</td><td>35%</td>
+        <td>217</td><td>396</td></tr>
+      <tr><td>Auckland</td>
+        <td class="barcell"><div class="bar" style="width:54.0%;background:var(--wind-soft)"></div>
+          <div class="bar" style="width:83.8%;background:var(--wind)"></div></td>
+        <td>19%</td><td>30%</td>
+        <td>217</td><td>354</td></tr>
+      <tr><td>Melbourne</td>
+        <td class="barcell"><div class="bar" style="width:49.9%;background:var(--wind-soft)"></div>
+          <div class="bar" style="width:83.8%;background:var(--wind)"></div></td>
+        <td>18%</td><td>30%</td>
+        <td>203</td><td>390</td></tr>
+      <tr><td>Adelaide</td>
+        <td class="barcell"><div class="bar" style="width:35.4%;background:var(--wind-soft)"></div>
+          <div class="bar" style="width:59.3%;background:var(--wind)"></div></td>
+        <td>13%</td><td>21%</td>
+        <td>146</td><td>242</td></tr>
+      <tr><td>Brisbane</td>
+        <td class="barcell"><div class="bar" style="width:18.6%;background:var(--wind-soft)"></div>
+          <div class="bar" style="width:42.9%;background:var(--wind)"></div></td>
+        <td>7%</td><td>15%</td>
+        <td>83</td><td>173</td></tr>
+</tbody></table></div>
+</section>
+
+<section>
+  <h2>Daily PV yield</h2><p class="sub">kWh per kWp. Stronger colour is more.</p>
+  <div class="scroll"><table class="heat">
+    <thead><tr><th></th><th>Thu<br>26 Nov</th><th>Fri<br>27 Nov</th><th>Sat<br>28 Nov</th><th>Sun<br>29 Nov</th><th>Mon<br>30 Nov</th><th>Tue<br>1 Dec</th><th>Wed<br>2 Dec</th><th>Thu<br>3 Dec</th><th>Fri<br>4 Dec</th><th>Sat<br>5 Dec</th><th>Sun<br>6 Dec</th><th>Mon<br>7 Dec</th><th>Tue<br>8 Dec</th><th>Wed<br>9 Dec</th><th>Thu<br>10 Dec</th></tr></thead>
+    <tbody><tr><td>Adelaide</td>
+      <td class="cell" tabindex="0" data-tip="3.1 kWh/kWp&#10;Adelaide, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 34%, var(--surface))">3.1</td>
+      <td class="cell" tabindex="0" data-tip="4.3 kWh/kWp&#10;Adelaide, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 47%, var(--surface))">4.3</td>
+      <td class="cell" tabindex="0" data-tip="6.0 kWh/kWp&#10;Adelaide, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 66%, var(--surface))">6.0</td>
+      <td class="cell" tabindex="0" data-tip="4.6 kWh/kWp&#10;Adelaide, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 50%, var(--surface))">4.6</td>
+      <td class="cell" tabindex="0" data-tip="6.0 kWh/kWp&#10;Adelaide, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 65%, var(--surface))">6.0</td>
+      <td class="cell" tabindex="0" data-tip="6.3 kWh/kWp&#10;Adelaide, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 68%, var(--surface))">6.3</td>
+      <td class="cell" tabindex="0" data-tip="6.0 kWh/kWp&#10;Adelaide, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 66%, var(--surface))">6.0</td>
+      <td class="cell" tabindex="0" data-tip="5.9 kWh/kWp&#10;Adelaide, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 64%, var(--surface))">5.9</td>
+      <td class="cell" tabindex="0" data-tip="6.0 kWh/kWp&#10;Adelaide, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 65%, var(--surface))">6.0</td>
+      <td class="cell" tabindex="0" data-tip="4.5 kWh/kWp&#10;Adelaide, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 49%, var(--surface))">4.5</td>
+      <td class="cell" tabindex="0" data-tip="6.2 kWh/kWp&#10;Adelaide, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 67%, var(--surface))">6.2</td>
+      <td class="cell" tabindex="0" data-tip="5.9 kWh/kWp&#10;Adelaide, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 64%, var(--surface))">5.9</td>
+      <td class="cell" tabindex="0" data-tip="3.1 kWh/kWp&#10;Adelaide, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 34%, var(--surface))">3.1</td>
+      <td class="cell" tabindex="0" data-tip="4.0 kWh/kWp&#10;Adelaide, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 44%, var(--surface))">4.0</td>
+      <td class="cell" tabindex="0" data-tip="4.6 kWh/kWp&#10;Adelaide, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 50%, var(--surface))">4.6</td>
+</tr><tr><td>Auckland</td>
+      <td class="cell" tabindex="0" data-tip="3.6 kWh/kWp&#10;Auckland, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 40%, var(--surface))">3.6</td>
+      <td class="cell" tabindex="0" data-tip="5.1 kWh/kWp&#10;Auckland, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 56%, var(--surface))">5.1</td>
+      <td class="cell" tabindex="0" data-tip="6.2 kWh/kWp&#10;Auckland, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 67%, var(--surface))">6.2</td>
+      <td class="cell" tabindex="0" data-tip="4.9 kWh/kWp&#10;Auckland, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 54%, var(--surface))">4.9</td>
+      <td class="cell" tabindex="0" data-tip="5.3 kWh/kWp&#10;Auckland, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 58%, var(--surface))">5.3</td>
+      <td class="cell" tabindex="0" data-tip="1.7 kWh/kWp&#10;Auckland, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 19%, var(--surface))">1.7</td>
+      <td class="cell" tabindex="0" data-tip="6.1 kWh/kWp&#10;Auckland, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 67%, var(--surface))">6.1</td>
+      <td class="cell" tabindex="0" data-tip="4.4 kWh/kWp&#10;Auckland, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 49%, var(--surface))">4.4</td>
+      <td class="cell" tabindex="0" data-tip="5.4 kWh/kWp&#10;Auckland, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 59%, var(--surface))">5.4</td>
+      <td class="cell" tabindex="0" data-tip="5.8 kWh/kWp&#10;Auckland, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 63%, var(--surface))">5.8</td>
+      <td class="cell" tabindex="0" data-tip="5.9 kWh/kWp&#10;Auckland, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 65%, var(--surface))">5.9</td>
+      <td class="cell" tabindex="0" data-tip="5.4 kWh/kWp&#10;Auckland, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 59%, var(--surface))">5.4</td>
+      <td class="cell" tabindex="0" data-tip="3.0 kWh/kWp&#10;Auckland, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 32%, var(--surface))">3.0</td>
+      <td class="cell" tabindex="0" data-tip="5.2 kWh/kWp&#10;Auckland, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 57%, var(--surface))">5.2</td>
+      <td class="cell" tabindex="0" data-tip="5.7 kWh/kWp&#10;Auckland, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 62%, var(--surface))">5.7</td>
+</tr><tr><td>Brisbane</td>
+      <td class="cell" tabindex="0" data-tip="4.5 kWh/kWp&#10;Brisbane, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 49%, var(--surface))">4.5</td>
+      <td class="cell" tabindex="0" data-tip="4.5 kWh/kWp&#10;Brisbane, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 49%, var(--surface))">4.5</td>
+      <td class="cell" tabindex="0" data-tip="5.3 kWh/kWp&#10;Brisbane, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 58%, var(--surface))">5.3</td>
+      <td class="cell" tabindex="0" data-tip="2.5 kWh/kWp&#10;Brisbane, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 28%, var(--surface))">2.5</td>
+      <td class="cell" tabindex="0" data-tip="5.6 kWh/kWp&#10;Brisbane, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 61%, var(--surface))">5.6</td>
+      <td class="cell" tabindex="0" data-tip="5.2 kWh/kWp&#10;Brisbane, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 57%, var(--surface))">5.2</td>
+      <td class="cell" tabindex="0" data-tip="4.8 kWh/kWp&#10;Brisbane, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 52%, var(--surface))">4.8</td>
+      <td class="cell" tabindex="0" data-tip="4.9 kWh/kWp&#10;Brisbane, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 53%, var(--surface))">4.9</td>
+      <td class="cell" tabindex="0" data-tip="5.4 kWh/kWp&#10;Brisbane, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 59%, var(--surface))">5.4</td>
+      <td class="cell" tabindex="0" data-tip="5.6 kWh/kWp&#10;Brisbane, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 61%, var(--surface))">5.6</td>
+      <td class="cell" tabindex="0" data-tip="5.9 kWh/kWp&#10;Brisbane, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 64%, var(--surface))">5.9</td>
+      <td class="cell" tabindex="0" data-tip="4.4 kWh/kWp&#10;Brisbane, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 48%, var(--surface))">4.4</td>
+      <td class="cell" tabindex="0" data-tip="4.4 kWh/kWp&#10;Brisbane, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 48%, var(--surface))">4.4</td>
+      <td class="cell" tabindex="0" data-tip="4.2 kWh/kWp&#10;Brisbane, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 46%, var(--surface))">4.2</td>
+      <td class="cell" tabindex="0" data-tip="4.9 kWh/kWp&#10;Brisbane, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 53%, var(--surface))">4.9</td>
+</tr><tr><td>Melbourne</td>
+      <td class="cell" tabindex="0" data-tip="5.2 kWh/kWp&#10;Melbourne, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 56%, var(--surface))">5.2</td>
+      <td class="cell" tabindex="0" data-tip="2.3 kWh/kWp&#10;Melbourne, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 25%, var(--surface))">2.3</td>
+      <td class="cell" tabindex="0" data-tip="3.6 kWh/kWp&#10;Melbourne, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 39%, var(--surface))">3.6</td>
+      <td class="cell" tabindex="0" data-tip="3.0 kWh/kWp&#10;Melbourne, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 32%, var(--surface))">3.0</td>
+      <td class="cell" tabindex="0" data-tip="3.7 kWh/kWp&#10;Melbourne, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 41%, var(--surface))">3.7</td>
+      <td class="cell" tabindex="0" data-tip="6.3 kWh/kWp&#10;Melbourne, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 68%, var(--surface))">6.3</td>
+      <td class="cell" tabindex="0" data-tip="6.0 kWh/kWp&#10;Melbourne, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 65%, var(--surface))">6.0</td>
+      <td class="cell" tabindex="0" data-tip="5.7 kWh/kWp&#10;Melbourne, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 62%, var(--surface))">5.7</td>
+      <td class="cell" tabindex="0" data-tip="5.3 kWh/kWp&#10;Melbourne, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 58%, var(--surface))">5.3</td>
+      <td class="cell" tabindex="0" data-tip="4.1 kWh/kWp&#10;Melbourne, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 44%, var(--surface))">4.1</td>
+      <td class="cell" tabindex="0" data-tip="4.2 kWh/kWp&#10;Melbourne, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 46%, var(--surface))">4.2</td>
+      <td class="cell" tabindex="0" data-tip="6.4 kWh/kWp&#10;Melbourne, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 70%, var(--surface))">6.4</td>
+      <td class="cell" tabindex="0" data-tip="5.8 kWh/kWp&#10;Melbourne, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 63%, var(--surface))">5.8</td>
+      <td class="cell" tabindex="0" data-tip="2.4 kWh/kWp&#10;Melbourne, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 26%, var(--surface))">2.4</td>
+      <td class="cell" tabindex="0" data-tip="3.0 kWh/kWp&#10;Melbourne, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 33%, var(--surface))">3.0</td>
+</tr><tr><td>Perth</td>
+      <td class="cell" tabindex="0" data-tip="6.3 kWh/kWp&#10;Perth, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 69%, var(--surface))">6.3</td>
+      <td class="cell" tabindex="0" data-tip="6.3 kWh/kWp&#10;Perth, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 69%, var(--surface))">6.3</td>
+      <td class="cell" tabindex="0" data-tip="6.2 kWh/kWp&#10;Perth, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 68%, var(--surface))">6.2</td>
+      <td class="cell" tabindex="0" data-tip="6.1 kWh/kWp&#10;Perth, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 66%, var(--surface))">6.1</td>
+      <td class="cell" tabindex="0" data-tip="3.9 kWh/kWp&#10;Perth, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 42%, var(--surface))">3.9</td>
+      <td class="cell" tabindex="0" data-tip="6.2 kWh/kWp&#10;Perth, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 67%, var(--surface))">6.2</td>
+      <td class="cell" tabindex="0" data-tip="6.2 kWh/kWp&#10;Perth, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 67%, var(--surface))">6.2</td>
+      <td class="cell" tabindex="0" data-tip="5.7 kWh/kWp&#10;Perth, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 63%, var(--surface))">5.7</td>
+      <td class="cell" tabindex="0" data-tip="6.1 kWh/kWp&#10;Perth, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 67%, var(--surface))">6.1</td>
+      <td class="cell" tabindex="0" data-tip="6.1 kWh/kWp&#10;Perth, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 66%, var(--surface))">6.1</td>
+      <td class="cell" tabindex="0" data-tip="6.0 kWh/kWp&#10;Perth, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 65%, var(--surface))">6.0</td>
+      <td class="cell" tabindex="0" data-tip="5.2 kWh/kWp&#10;Perth, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 56%, var(--surface))">5.2</td>
+      <td class="cell" tabindex="0" data-tip="6.3 kWh/kWp&#10;Perth, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 69%, var(--surface))">6.3</td>
+      <td class="cell" tabindex="0" data-tip="6.2 kWh/kWp&#10;Perth, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 67%, var(--surface))">6.2</td>
+      <td class="cell" tabindex="0" data-tip="5.9 kWh/kWp&#10;Perth, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 65%, var(--surface))">5.9</td>
+</tr><tr><td>Sydney</td>
+      <td class="cell" tabindex="0" data-tip="5.4 kWh/kWp&#10;Sydney, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 59%, var(--surface))">5.4</td>
+      <td class="cell" tabindex="0" data-tip="4.8 kWh/kWp&#10;Sydney, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 52%, var(--surface))">4.8</td>
+      <td class="cell" tabindex="0" data-tip="3.9 kWh/kWp&#10;Sydney, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 42%, var(--surface))">3.9</td>
+      <td class="cell" tabindex="0" data-tip="5.2 kWh/kWp&#10;Sydney, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 57%, var(--surface))">5.2</td>
+      <td class="cell" tabindex="0" data-tip="4.6 kWh/kWp&#10;Sydney, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 51%, var(--surface))">4.6</td>
+      <td class="cell" tabindex="0" data-tip="4.9 kWh/kWp&#10;Sydney, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 54%, var(--surface))">4.9</td>
+      <td class="cell" tabindex="0" data-tip="5.9 kWh/kWp&#10;Sydney, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--solar) 64%, var(--surface))">5.9</td>
+      <td class="cell" tabindex="0" data-tip="5.6 kWh/kWp&#10;Sydney, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 61%, var(--surface))">5.6</td>
+      <td class="cell" tabindex="0" data-tip="5.4 kWh/kWp&#10;Sydney, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 59%, var(--surface))">5.4</td>
+      <td class="cell" tabindex="0" data-tip="5.1 kWh/kWp&#10;Sydney, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 56%, var(--surface))">5.1</td>
+      <td class="cell" tabindex="0" data-tip="4.4 kWh/kWp&#10;Sydney, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--solar) 48%, var(--surface))">4.4</td>
+      <td class="cell" tabindex="0" data-tip="2.6 kWh/kWp&#10;Sydney, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 28%, var(--surface))">2.6</td>
+      <td class="cell" tabindex="0" data-tip="4.4 kWh/kWp&#10;Sydney, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 48%, var(--surface))">4.4</td>
+      <td class="cell" tabindex="0" data-tip="5.8 kWh/kWp&#10;Sydney, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 63%, var(--surface))">5.8</td>
+      <td class="cell" tabindex="0" data-tip="5.2 kWh/kWp&#10;Sydney, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--solar) 56%, var(--surface))">5.2</td>
+</tr>    <tr><td class="conf sub">Confidence</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">low</td><td class="conf sub">low</td><td class="conf sub">low</td><td class="conf sub">low</td></tr>
+    </tbody></table></div>
+</section>
+
+<section>
+  <h2>Daily wind capacity factor, 100 m</h2><p class="sub">Share of rated output. Stronger colour is more.</p>
+  <div class="scroll"><table class="heat">
+    <thead><tr><th></th><th>Thu<br>26 Nov</th><th>Fri<br>27 Nov</th><th>Sat<br>28 Nov</th><th>Sun<br>29 Nov</th><th>Mon<br>30 Nov</th><th>Tue<br>1 Dec</th><th>Wed<br>2 Dec</th><th>Thu<br>3 Dec</th><th>Fri<br>4 Dec</th><th>Sat<br>5 Dec</th><th>Sun<br>6 Dec</th><th>Mon<br>7 Dec</th><th>Tue<br>8 Dec</th><th>Wed<br>9 Dec</th><th>Thu<br>10 Dec</th></tr></thead>
+    <tbody><tr><td>Adelaide</td>
+      <td class="cell" tabindex="0" data-tip="2%&#10;Adelaide, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 2%, var(--surface))">2%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Adelaide, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+      <td class="cell" tabindex="0" data-tip="24%&#10;Adelaide, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 23%, var(--surface))">24%</td>
+      <td class="cell" tabindex="0" data-tip="24%&#10;Adelaide, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 23%, var(--surface))">24%</td>
+      <td class="cell" tabindex="0" data-tip="10%&#10;Adelaide, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 10%, var(--surface))">10%</td>
+      <td class="cell" tabindex="0" data-tip="1%&#10;Adelaide, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 1%, var(--surface))">1%</td>
+      <td class="cell" tabindex="0" data-tip="5%&#10;Adelaide, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 5%, var(--surface))">5%</td>
+      <td class="cell" tabindex="0" data-tip="9%&#10;Adelaide, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 9%, var(--surface))">9%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Adelaide, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+      <td class="cell" tabindex="0" data-tip="24%&#10;Adelaide, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 24%, var(--surface))">24%</td>
+      <td class="cell" tabindex="0" data-tip="13%&#10;Adelaide, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 12%, var(--surface))">13%</td>
+      <td class="cell" tabindex="0" data-tip="17%&#10;Adelaide, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 16%, var(--surface))">17%</td>
+      <td class="cell" tabindex="0" data-tip="20%&#10;Adelaide, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 20%, var(--surface))">20%</td>
+      <td class="cell" tabindex="0" data-tip="19%&#10;Adelaide, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 18%, var(--surface))">19%</td>
+      <td class="cell" tabindex="0" data-tip="19%&#10;Adelaide, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 19%, var(--surface))">19%</td>
+</tr><tr><td>Auckland</td>
+      <td class="cell" tabindex="0" data-tip="7%&#10;Auckland, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 7%, var(--surface))">7%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Auckland, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+      <td class="cell" tabindex="0" data-tip="3%&#10;Auckland, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 3%, var(--surface))">3%</td>
+      <td class="cell" tabindex="0" data-tip="8%&#10;Auckland, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 8%, var(--surface))">8%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Auckland, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+      <td class="cell" tabindex="0" data-tip="50%&#10;Auckland, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 49%, var(--surface))">50%</td>
+      <td class="cell" tabindex="0" data-tip="71%&#10;Auckland, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 70%, var(--surface))">71%</td>
+      <td class="cell" tabindex="0" data-tip="42%&#10;Auckland, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 41%, var(--surface))">42%</td>
+      <td class="cell" tabindex="0" data-tip="34%&#10;Auckland, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 33%, var(--surface))">34%</td>
+      <td class="cell" tabindex="0" data-tip="13%&#10;Auckland, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 13%, var(--surface))">13%</td>
+      <td class="cell" tabindex="0" data-tip="3%&#10;Auckland, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 3%, var(--surface))">3%</td>
+      <td class="cell" tabindex="0" data-tip="9%&#10;Auckland, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 9%, var(--surface))">9%</td>
+      <td class="cell" tabindex="0" data-tip="15%&#10;Auckland, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 14%, var(--surface))">15%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Auckland, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+      <td class="cell" tabindex="0" data-tip="25%&#10;Auckland, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 24%, var(--surface))">25%</td>
+</tr><tr><td>Brisbane</td>
+      <td class="cell" tabindex="0" data-tip="6%&#10;Brisbane, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 5%, var(--surface))">6%</td>
+      <td class="cell" tabindex="0" data-tip="6%&#10;Brisbane, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 6%, var(--surface))">6%</td>
+      <td class="cell" tabindex="0" data-tip="11%&#10;Brisbane, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 11%, var(--surface))">11%</td>
+      <td class="cell" tabindex="0" data-tip="5%&#10;Brisbane, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 5%, var(--surface))">5%</td>
+      <td class="cell" tabindex="0" data-tip="7%&#10;Brisbane, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 7%, var(--surface))">7%</td>
+      <td class="cell" tabindex="0" data-tip="16%&#10;Brisbane, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 15%, var(--surface))">16%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Brisbane, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+      <td class="cell" tabindex="0" data-tip="2%&#10;Brisbane, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 2%, var(--surface))">2%</td>
+      <td class="cell" tabindex="0" data-tip="3%&#10;Brisbane, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 3%, var(--surface))">3%</td>
+      <td class="cell" tabindex="0" data-tip="6%&#10;Brisbane, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 6%, var(--surface))">6%</td>
+      <td class="cell" tabindex="0" data-tip="5%&#10;Brisbane, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 5%, var(--surface))">5%</td>
+      <td class="cell" tabindex="0" data-tip="2%&#10;Brisbane, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 2%, var(--surface))">2%</td>
+      <td class="cell" tabindex="0" data-tip="19%&#10;Brisbane, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 19%, var(--surface))">19%</td>
+      <td class="cell" tabindex="0" data-tip="2%&#10;Brisbane, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 2%, var(--surface))">2%</td>
+      <td class="cell" tabindex="0" data-tip="2%&#10;Brisbane, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 2%, var(--surface))">2%</td>
+</tr><tr><td>Melbourne</td>
+      <td class="cell" tabindex="0" data-tip="2%&#10;Melbourne, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 2%, var(--surface))">2%</td>
+      <td class="cell" tabindex="0" data-tip="3%&#10;Melbourne, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 3%, var(--surface))">3%</td>
+      <td class="cell" tabindex="0" data-tip="18%&#10;Melbourne, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 18%, var(--surface))">18%</td>
+      <td class="cell" tabindex="0" data-tip="8%&#10;Melbourne, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 8%, var(--surface))">8%</td>
+      <td class="cell" tabindex="0" data-tip="14%&#10;Melbourne, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 14%, var(--surface))">14%</td>
+      <td class="cell" tabindex="0" data-tip="2%&#10;Melbourne, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 2%, var(--surface))">2%</td>
+      <td class="cell" tabindex="0" data-tip="22%&#10;Melbourne, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 22%, var(--surface))">22%</td>
+      <td class="cell" tabindex="0" data-tip="31%&#10;Melbourne, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 30%, var(--surface))">31%</td>
+      <td class="cell" tabindex="0" data-tip="31%&#10;Melbourne, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 31%, var(--surface))">31%</td>
+      <td class="cell" tabindex="0" data-tip="21%&#10;Melbourne, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 21%, var(--surface))">21%</td>
+      <td class="cell" tabindex="0" data-tip="22%&#10;Melbourne, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 21%, var(--surface))">22%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Melbourne, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+      <td class="cell" tabindex="0" data-tip="56%&#10;Melbourne, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 55%, var(--surface))">56%</td>
+      <td class="cell" tabindex="0" data-tip="13%&#10;Melbourne, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 13%, var(--surface))">13%</td>
+      <td class="cell" tabindex="0" data-tip="5%&#10;Melbourne, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 5%, var(--surface))">5%</td>
+</tr><tr><td>Perth</td>
+      <td class="cell" tabindex="0" data-tip="14%&#10;Perth, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 14%, var(--surface))">14%</td>
+      <td class="cell" tabindex="0" data-tip="26%&#10;Perth, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 26%, var(--surface))">26%</td>
+      <td class="cell" tabindex="0" data-tip="13%&#10;Perth, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 13%, var(--surface))">13%</td>
+      <td class="cell" tabindex="0" data-tip="16%&#10;Perth, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 16%, var(--surface))">16%</td>
+      <td class="cell" tabindex="0" data-tip="25%&#10;Perth, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 25%, var(--surface))">25%</td>
+      <td class="cell" tabindex="0" data-tip="24%&#10;Perth, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 24%, var(--surface))">24%</td>
+      <td class="cell" tabindex="0" data-tip="17%&#10;Perth, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 17%, var(--surface))">17%</td>
+      <td class="cell" tabindex="0" data-tip="9%&#10;Perth, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 9%, var(--surface))">9%</td>
+      <td class="cell" tabindex="0" data-tip="12%&#10;Perth, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 12%, var(--surface))">12%</td>
+      <td class="cell" tabindex="0" data-tip="17%&#10;Perth, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 17%, var(--surface))">17%</td>
+      <td class="cell" tabindex="0" data-tip="26%&#10;Perth, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 25%, var(--surface))">26%</td>
+      <td class="cell" tabindex="0" data-tip="41%&#10;Perth, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 41%, var(--surface))">41%</td>
+      <td class="cell" tabindex="0" data-tip="13%&#10;Perth, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 13%, var(--surface))">13%</td>
+      <td class="cell" tabindex="0" data-tip="16%&#10;Perth, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 16%, var(--surface))">16%</td>
+      <td class="cell" tabindex="0" data-tip="11%&#10;Perth, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 11%, var(--surface))">11%</td>
+</tr><tr><td>Sydney</td>
+      <td class="cell" tabindex="0" data-tip="6%&#10;Sydney, 26 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 6%, var(--surface))">6%</td>
+      <td class="cell" tabindex="0" data-tip="20%&#10;Sydney, 27 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 20%, var(--surface))">20%</td>
+      <td class="cell" tabindex="0" data-tip="24%&#10;Sydney, 28 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 23%, var(--surface))">24%</td>
+      <td class="cell" tabindex="0" data-tip="11%&#10;Sydney, 29 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 11%, var(--surface))">11%</td>
+      <td class="cell" tabindex="0" data-tip="17%&#10;Sydney, 30 Nov&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 17%, var(--surface))">17%</td>
+      <td class="cell" tabindex="0" data-tip="7%&#10;Sydney, 1 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 7%, var(--surface))">7%</td>
+      <td class="cell" tabindex="0" data-tip="18%&#10;Sydney, 2 Dec&#10;high confidence"
+        style="background:color-mix(in oklab, var(--wind) 17%, var(--surface))">18%</td>
+      <td class="cell" tabindex="0" data-tip="11%&#10;Sydney, 3 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 11%, var(--surface))">11%</td>
+      <td class="cell" tabindex="0" data-tip="7%&#10;Sydney, 4 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 7%, var(--surface))">7%</td>
+      <td class="cell" tabindex="0" data-tip="20%&#10;Sydney, 5 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 20%, var(--surface))">20%</td>
+      <td class="cell" tabindex="0" data-tip="23%&#10;Sydney, 6 Dec&#10;medium confidence"
+        style="background:color-mix(in oklab, var(--wind) 23%, var(--surface))">23%</td>
+      <td class="cell" tabindex="0" data-tip="31%&#10;Sydney, 7 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 31%, var(--surface))">31%</td>
+      <td class="cell" tabindex="0" data-tip="44%&#10;Sydney, 8 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 43%, var(--surface))">44%</td>
+      <td class="cell" tabindex="0" data-tip="36%&#10;Sydney, 9 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 35%, var(--surface))">36%</td>
+      <td class="cell" tabindex="0" data-tip="4%&#10;Sydney, 10 Dec&#10;low confidence"
+        style="background:color-mix(in oklab, var(--wind) 4%, var(--surface))">4%</td>
+</tr>    <tr><td class="conf sub">Confidence</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">low</td><td class="conf sub">low</td><td class="conf sub">low</td><td class="conf sub">low</td></tr>
+    </tbody></table></div>
+</section>
+
+
+<section>
+  <h2>Average day: when each city generates</h2>
+  <p class="sub">Output as a share of installed capacity by local hour. Where wind holds up overnight, the two complement each other.</p>
+  <div class="legend"><span><i class="line" style="background:var(--solar)"></i>Solar</span><span><i class="line" style="background:var(--wind)"></i>Wind, 100 m</span></div>
+  <div class="panels">    <div class="panel"><h3>Adelaide</h3>
+    <svg viewBox="0 0 300 140" role="img" aria-label="Adelaide: average solar and wind output by hour" data-values='[[0, 0.0, 0.1546], [1, 0.0, 0.1447], [2, 0.0, 0.1402], [3, 0.0, 0.1369], [4, 0.0, 0.1287], [5, 0.0033, 0.1138], [6, 0.0429, 0.1033], [7, 0.1699, 0.087], [8, 0.3145, 0.0753], [9, 0.4486, 0.0757], [10, 0.5449, 0.0737], [11, 0.6176, 0.0898], [12, 0.6593, 0.1], [13, 0.6293, 0.1143], [14, 0.563, 0.1289], [15, 0.4783, 0.15], [16, 0.3523, 0.1709], [17, 0.2098, 0.1836], [18, 0.0565, 0.1696], [19, 0.0071, 0.1472], [20, 0.0, 0.1404], [21, 0.0, 0.1524], [22, 0.0, 0.1614], [23, 0.0, 0.1621]]' data-city="Adelaide">
+      <line x1="34" x2="290" y1="120" y2="120" stroke="var(--axis)"/>
+      <text x="29" y="123" text-anchor="end">0%</text>      <line x1="34" x2="290" y1="65.0" y2="65.0" stroke="var(--grid)"/>
+      <text x="29" y="68.0" text-anchor="end">40%</text>      <line x1="34" x2="290" y1="10" y2="10" stroke="var(--grid)"/>
+      <text x="29" y="13" text-anchor="end">80%</text><text x="34.0" y="134" text-anchor="middle">00</text><text x="100.78260869565217" y="134" text-anchor="middle">06</text><text x="167.56521739130434" y="134" text-anchor="middle">12</text><text x="234.34782608695653" y="134" text-anchor="middle">18</text><text x="290.0" y="134" text-anchor="middle">23</text>      <line class="cross" y1="10" y2="120" stroke="var(--axis)" style="display:none"/>
+      <polyline points="34.0,98.7 45.1,100.1 56.3,100.7 67.4,101.2 78.5,102.3 89.7,104.4 100.8,105.8 111.9,108.0 123.0,109.6 134.2,109.6 145.3,109.9 156.4,107.6 167.6,106.3 178.7,104.3 189.8,102.3 201.0,99.4 212.1,96.5 223.2,94.8 234.3,96.7 245.5,99.8 256.6,100.7 267.7,99.0 278.9,97.8 290.0,97.7" fill="none" stroke="var(--wind)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="34.0,120.0 45.1,120.0 56.3,120.0 67.4,120.0 78.5,120.0 89.7,119.5 100.8,114.1 111.9,96.6 123.0,76.8 134.2,58.3 145.3,45.1 156.4,35.1 167.6,29.3 178.7,33.5 189.8,42.6 201.0,54.2 212.1,71.6 223.2,91.2 234.3,112.2 245.5,119.0 256.6,120.0 267.7,120.0 278.9,120.0 290.0,120.0" fill="none" stroke="var(--solar)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>    <div class="panel"><h3>Auckland</h3>
+    <svg viewBox="0 0 300 140" role="img" aria-label="Auckland: average solar and wind output by hour" data-values='[[0, 0.0, 0.1629], [1, 0.0, 0.1741], [2, 0.0, 0.185], [3, 0.0, 0.1931], [4, 0.0, 0.1938], [5, 0.0, 0.1936], [6, 0.0196, 0.1949], [7, 0.0983, 0.1911], [8, 0.2517, 0.1859], [9, 0.3896, 0.1876], [10, 0.4832, 0.1915], [11, 0.5467, 0.2248], [12, 0.5885, 0.25], [13, 0.5881, 0.2593], [14, 0.5669, 0.221], [15, 0.4998, 0.1991], [16, 0.4094, 0.2175], [17, 0.2884, 0.2219], [18, 0.1509, 0.2048], [19, 0.0393, 0.1859], [20, 0.0014, 0.1688], [21, 0.0, 0.1548], [22, 0.0, 0.1489], [23, 0.0, 0.1595]]' data-city="Auckland">
+      <line x1="34" x2="290" y1="120" y2="120" stroke="var(--axis)"/>
+      <text x="29" y="123" text-anchor="end">0%</text>      <line x1="34" x2="290" y1="65.0" y2="65.0" stroke="var(--grid)"/>
+      <text x="29" y="68.0" text-anchor="end">40%</text>      <line x1="34" x2="290" y1="10" y2="10" stroke="var(--grid)"/>
+      <text x="29" y="13" text-anchor="end">80%</text><text x="34.0" y="134" text-anchor="middle">00</text><text x="100.78260869565217" y="134" text-anchor="middle">06</text><text x="167.56521739130434" y="134" text-anchor="middle">12</text><text x="234.34782608695653" y="134" text-anchor="middle">18</text><text x="290.0" y="134" text-anchor="middle">23</text>      <line class="cross" y1="10" y2="120" stroke="var(--axis)" style="display:none"/>
+      <polyline points="34.0,97.6 45.1,96.1 56.3,94.6 67.4,93.4 78.5,93.4 89.7,93.4 100.8,93.2 111.9,93.7 123.0,94.4 134.2,94.2 145.3,93.7 156.4,89.1 167.6,85.6 178.7,84.3 189.8,89.6 201.0,92.6 212.1,90.1 223.2,89.5 234.3,91.8 245.5,94.4 256.6,96.8 267.7,98.7 278.9,99.5 290.0,98.1" fill="none" stroke="var(--wind)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="34.0,120.0 45.1,120.0 56.3,120.0 67.4,120.0 78.5,120.0 89.7,120.0 100.8,117.3 111.9,106.5 123.0,85.4 134.2,66.4 145.3,53.6 156.4,44.8 167.6,39.1 178.7,39.1 189.8,42.0 201.0,51.3 212.1,63.7 223.2,80.3 234.3,99.2 245.5,114.6 256.6,119.8 267.7,120.0 278.9,120.0 290.0,120.0" fill="none" stroke="var(--solar)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>    <div class="panel"><h3>Brisbane</h3>
+    <svg viewBox="0 0 300 140" role="img" aria-label="Brisbane: average solar and wind output by hour" data-values='[[0, 0.0, 0.0505], [1, 0.0, 0.0414], [2, 0.0, 0.0379], [3, 0.0, 0.0372], [4, 0.0, 0.0395], [5, 0.0291, 0.0369], [6, 0.1644, 0.0333], [7, 0.3057, 0.0333], [8, 0.4333, 0.0415], [9, 0.5296, 0.0473], [10, 0.5859, 0.0587], [11, 0.5985, 0.0619], [12, 0.5912, 0.0676], [13, 0.5437, 0.0811], [14, 0.4449, 0.0882], [15, 0.3267, 0.091], [16, 0.1856, 0.0953], [17, 0.0504, 0.0961], [18, 0.0026, 0.0926], [19, 0.0, 0.0862], [20, 0.0, 0.0791], [21, 0.0, 0.0757], [22, 0.0, 0.0709], [23, 0.0, 0.0599]]' data-city="Brisbane">
+      <line x1="34" x2="290" y1="120" y2="120" stroke="var(--axis)"/>
+      <text x="29" y="123" text-anchor="end">0%</text>      <line x1="34" x2="290" y1="65.0" y2="65.0" stroke="var(--grid)"/>
+      <text x="29" y="68.0" text-anchor="end">40%</text>      <line x1="34" x2="290" y1="10" y2="10" stroke="var(--grid)"/>
+      <text x="29" y="13" text-anchor="end">80%</text><text x="34.0" y="134" text-anchor="middle">00</text><text x="100.78260869565217" y="134" text-anchor="middle">06</text><text x="167.56521739130434" y="134" text-anchor="middle">12</text><text x="234.34782608695653" y="134" text-anchor="middle">18</text><text x="290.0" y="134" text-anchor="middle">23</text>      <line class="cross" y1="10" y2="120" stroke="var(--axis)" style="display:none"/>
+      <polyline points="34.0,113.0 45.1,114.3 56.3,114.8 67.4,114.9 78.5,114.6 89.7,114.9 100.8,115.4 111.9,115.4 123.0,114.3 134.2,113.5 145.3,111.9 156.4,111.5 167.6,110.7 178.7,108.9 189.8,107.9 201.0,107.5 212.1,106.9 223.2,106.8 234.3,107.3 245.5,108.1 256.6,109.1 267.7,109.6 278.9,110.3 290.0,111.8" fill="none" stroke="var(--wind)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="34.0,120.0 45.1,120.0 56.3,120.0 67.4,120.0 78.5,120.0 89.7,116.0 100.8,97.4 111.9,78.0 123.0,60.4 134.2,47.2 145.3,39.4 156.4,37.7 167.6,38.7 178.7,45.2 189.8,58.8 201.0,75.1 212.1,94.5 223.2,113.1 234.3,119.6 245.5,120.0 256.6,120.0 267.7,120.0 278.9,120.0 290.0,120.0" fill="none" stroke="var(--solar)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>    <div class="panel"><h3>Melbourne</h3>
+    <svg viewBox="0 0 300 140" role="img" aria-label="Melbourne: average solar and wind output by hour" data-values='[[0, 0.0, 0.1376], [1, 0.0, 0.1517], [2, 0.0, 0.1529], [3, 0.0, 0.1608], [4, 0.0, 0.1829], [5, 0.0, 0.2116], [6, 0.0163, 0.2354], [7, 0.0899, 0.1829], [8, 0.2193, 0.169], [9, 0.3325, 0.1562], [10, 0.4279, 0.1534], [11, 0.5086, 0.166], [12, 0.5511, 0.1785], [13, 0.5391, 0.1833], [14, 0.5233, 0.1821], [15, 0.461, 0.1819], [16, 0.3729, 0.1896], [17, 0.2484, 0.1835], [18, 0.1254, 0.1653], [19, 0.0344, 0.1456], [20, 0.0015, 0.1353], [21, 0.0, 0.1346], [22, 0.0, 0.1398], [23, 0.0, 0.1478]]' data-city="Melbourne">
+      <line x1="34" x2="290" y1="120" y2="120" stroke="var(--axis)"/>
+      <text x="29" y="123" text-anchor="end">0%</text>      <line x1="34" x2="290" y1="65.0" y2="65.0" stroke="var(--grid)"/>
+      <text x="29" y="68.0" text-anchor="end">40%</text>      <line x1="34" x2="290" y1="10" y2="10" stroke="var(--grid)"/>
+      <text x="29" y="13" text-anchor="end">80%</text><text x="34.0" y="134" text-anchor="middle">00</text><text x="100.78260869565217" y="134" text-anchor="middle">06</text><text x="167.56521739130434" y="134" text-anchor="middle">12</text><text x="234.34782608695653" y="134" text-anchor="middle">18</text><text x="290.0" y="134" text-anchor="middle">23</text>      <line class="cross" y1="10" y2="120" stroke="var(--axis)" style="display:none"/>
+      <polyline points="34.0,101.1 45.1,99.1 56.3,99.0 67.4,97.9 78.5,94.9 89.7,90.9 100.8,87.6 111.9,94.8 123.0,96.8 134.2,98.5 145.3,98.9 156.4,97.2 167.6,95.5 178.7,94.8 189.8,95.0 201.0,95.0 212.1,93.9 223.2,94.8 234.3,97.3 245.5,100.0 256.6,101.4 267.7,101.5 278.9,100.8 290.0,99.7" fill="none" stroke="var(--wind)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="34.0,120.0 45.1,120.0 56.3,120.0 67.4,120.0 78.5,120.0 89.7,120.0 100.8,117.8 111.9,107.6 123.0,89.8 134.2,74.3 145.3,61.2 156.4,50.1 167.6,44.2 178.7,45.9 189.8,48.0 201.0,56.6 212.1,68.7 223.2,85.9 234.3,102.8 245.5,115.3 256.6,119.8 267.7,120.0 278.9,120.0 290.0,120.0" fill="none" stroke="var(--solar)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>    <div class="panel"><h3>Perth</h3>
+    <svg viewBox="0 0 300 140" role="img" aria-label="Perth: average solar and wind output by hour" data-values='[[0, 0.0, 0.1725], [1, 0.0, 0.1679], [2, 0.0, 0.1698], [3, 0.0, 0.1611], [4, 0.0, 0.1411], [5, 0.0126, 0.1249], [6, 0.1039, 0.1041], [7, 0.2826, 0.0693], [8, 0.4522, 0.0589], [9, 0.5888, 0.0595], [10, 0.6863, 0.0756], [11, 0.7474, 0.1102], [12, 0.7536, 0.1719], [13, 0.7079, 0.2661], [14, 0.6087, 0.3299], [15, 0.4822, 0.3478], [16, 0.3215, 0.3281], [17, 0.1403, 0.307], [18, 0.0173, 0.2764], [19, 0.0, 0.2515], [20, 0.0, 0.2331], [21, 0.0, 0.2002], [22, 0.0, 0.1847], [23, 0.0, 0.1826]]' data-city="Perth">
+      <line x1="34" x2="290" y1="120" y2="120" stroke="var(--axis)"/>
+      <text x="29" y="123" text-anchor="end">0%</text>      <line x1="34" x2="290" y1="65.0" y2="65.0" stroke="var(--grid)"/>
+      <text x="29" y="68.0" text-anchor="end">40%</text>      <line x1="34" x2="290" y1="10" y2="10" stroke="var(--grid)"/>
+      <text x="29" y="13" text-anchor="end">80%</text><text x="34.0" y="134" text-anchor="middle">00</text><text x="100.78260869565217" y="134" text-anchor="middle">06</text><text x="167.56521739130434" y="134" text-anchor="middle">12</text><text x="234.34782608695653" y="134" text-anchor="middle">18</text><text x="290.0" y="134" text-anchor="middle">23</text>      <line class="cross" y1="10" y2="120" stroke="var(--axis)" style="display:none"/>
+      <polyline points="34.0,96.3 45.1,96.9 56.3,96.7 67.4,97.9 78.5,100.6 89.7,102.8 100.8,105.7 111.9,110.5 123.0,111.9 134.2,111.8 145.3,109.6 156.4,104.9 167.6,96.4 178.7,83.4 189.8,74.6 201.0,72.2 212.1,74.9 223.2,77.8 234.3,82.0 245.5,85.4 256.6,87.9 267.7,92.5 278.9,94.6 290.0,94.9" fill="none" stroke="var(--wind)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="34.0,120.0 45.1,120.0 56.3,120.0 67.4,120.0 78.5,120.0 89.7,118.3 100.8,105.7 111.9,81.1 123.0,57.8 134.2,39.0 145.3,25.6 156.4,17.2 167.6,16.4 178.7,22.7 189.8,36.3 201.0,53.7 212.1,75.8 223.2,100.7 234.3,117.6 245.5,120.0 256.6,120.0 267.7,120.0 278.9,120.0 290.0,120.0" fill="none" stroke="var(--solar)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>    <div class="panel"><h3>Sydney</h3>
+    <svg viewBox="0 0 300 140" role="img" aria-label="Sydney: average solar and wind output by hour" data-values='[[0, 0.0, 0.2381], [1, 0.0, 0.2022], [2, 0.0, 0.1774], [3, 0.0, 0.1538], [4, 0.0, 0.1354], [5, 0.001, 0.1306], [6, 0.0338, 0.1227], [7, 0.1455, 0.106], [8, 0.286, 0.0968], [9, 0.4226, 0.0998], [10, 0.5116, 0.1168], [11, 0.6005, 0.1368], [12, 0.6334, 0.1562], [13, 0.6075, 0.1693], [14, 0.5525, 0.1633], [15, 0.4631, 0.2189], [16, 0.3427, 0.2397], [17, 0.1995, 0.266], [18, 0.0714, 0.2742], [19, 0.0104, 0.2564], [20, 0.0, 0.2497], [21, 0.0, 0.2638], [22, 0.0, 0.2535], [23, 0.0, 0.2466]]' data-city="Sydney">
+      <line x1="34" x2="290" y1="120" y2="120" stroke="var(--axis)"/>
+      <text x="29" y="123" text-anchor="end">0%</text>      <line x1="34" x2="290" y1="65.0" y2="65.0" stroke="var(--grid)"/>
+      <text x="29" y="68.0" text-anchor="end">40%</text>      <line x1="34" x2="290" y1="10" y2="10" stroke="var(--grid)"/>
+      <text x="29" y="13" text-anchor="end">80%</text><text x="34.0" y="134" text-anchor="middle">00</text><text x="100.78260869565217" y="134" text-anchor="middle">06</text><text x="167.56521739130434" y="134" text-anchor="middle">12</text><text x="234.34782608695653" y="134" text-anchor="middle">18</text><text x="290.0" y="134" text-anchor="middle">23</text>      <line class="cross" y1="10" y2="120" stroke="var(--axis)" style="display:none"/>
+      <polyline points="34.0,87.3 45.1,92.2 56.3,95.6 67.4,98.9 78.5,101.4 89.7,102.0 100.8,103.1 111.9,105.4 123.0,106.7 134.2,106.3 145.3,103.9 156.4,101.2 167.6,98.5 178.7,96.7 189.8,97.5 201.0,89.9 212.1,87.0 223.2,83.4 234.3,82.3 245.5,84.7 256.6,85.7 267.7,83.7 278.9,85.1 290.0,86.1" fill="none" stroke="var(--wind)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="34.0,120.0 45.1,120.0 56.3,120.0 67.4,120.0 78.5,120.0 89.7,119.9 100.8,115.4 111.9,100.0 123.0,80.7 134.2,61.9 145.3,49.7 156.4,37.4 167.6,32.9 178.7,36.5 189.8,44.0 201.0,56.3 212.1,72.9 223.2,92.6 234.3,110.2 245.5,118.6 256.6,120.0 267.7,120.0 278.9,120.0 290.0,120.0" fill="none" stroke="var(--solar)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>  </div>
+</section>
+
+<section>
+  <h2>Renewable supply risk</h2>
+  <p class="sub">0 is strong sun and wind; 100 is dark, calm and gusty.
+  Solar shortfall 45%, wind shortfall 45%, gust hazard 10%.</p>
+  <div class="legend"><span>○ low, under 35</span>
+    <span>▲ moderate, 35 to 59</span><span>■ high, 60 and over</span></div>
+  <div class="scroll"><table class="heat">
+    <thead><tr><th></th><th>Thu<br>26 Nov</th><th>Fri<br>27 Nov</th><th>Sat<br>28 Nov</th><th>Sun<br>29 Nov</th><th>Mon<br>30 Nov</th><th>Tue<br>1 Dec</th><th>Wed<br>2 Dec</th><th>Thu<br>3 Dec</th><th>Fri<br>4 Dec</th><th>Sat<br>5 Dec</th><th>Sun<br>6 Dec</th><th>Mon<br>7 Dec</th><th>Tue<br>8 Dec</th><th>Wed<br>9 Dec</th><th>Thu<br>10 Dec</th><th>Avg</th></tr></thead>
+    <tbody><tr><td>Brisbane</td>
+      <td class="cell" tabindex="0" data-tip="42 of 100, moderate&#10;Brisbane, 26 Nov&#10;PV 4.5 kWh/kWp, wind 6%&#10;Peak gust 9 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 42</td>
+      <td class="cell" tabindex="0" data-tip="42 of 100, moderate&#10;Brisbane, 27 Nov&#10;PV 4.5 kWh/kWp, wind 6%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 42</td>
+      <td class="cell" tabindex="0" data-tip="31 of 100, low&#10;Brisbane, 28 Nov&#10;PV 5.3 kWh/kWp, wind 11%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 31</td>
+      <td class="cell" tabindex="0" data-tip="61 of 100, high&#10;Brisbane, 29 Nov&#10;PV 2.5 kWh/kWp, wind 5%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--high) 55%, var(--surface))">■ 61</td>
+      <td class="cell" tabindex="0" data-tip="36 of 100, moderate&#10;Brisbane, 30 Nov&#10;PV 5.6 kWh/kWp, wind 7%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 36</td>
+      <td class="cell" tabindex="0" data-tip="25 of 100, low&#10;Brisbane, 1 Dec&#10;PV 5.2 kWh/kWp, wind 16%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 25</td>
+      <td class="cell" tabindex="0" data-tip="42 of 100, moderate&#10;Brisbane, 2 Dec&#10;PV 4.8 kWh/kWp, wind 4%&#10;Peak gust 9 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 42</td>
+      <td class="cell" tabindex="0" data-tip="44 of 100, moderate&#10;Brisbane, 3 Dec&#10;PV 4.9 kWh/kWp, wind 2%&#10;Peak gust 8 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 44</td>
+      <td class="cell" tabindex="0" data-tip="41 of 100, moderate&#10;Brisbane, 4 Dec&#10;PV 5.4 kWh/kWp, wind 3%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 41</td>
+      <td class="cell" tabindex="0" data-tip="37 of 100, moderate&#10;Brisbane, 5 Dec&#10;PV 5.6 kWh/kWp, wind 6%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 37</td>
+      <td class="cell" tabindex="0" data-tip="38 of 100, moderate&#10;Brisbane, 6 Dec&#10;PV 5.9 kWh/kWp, wind 5%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 38</td>
+      <td class="cell" tabindex="0" data-tip="48 of 100, moderate&#10;Brisbane, 7 Dec&#10;PV 4.4 kWh/kWp, wind 2%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 48</td>
+      <td class="cell" tabindex="0" data-tip="26 of 100, low&#10;Brisbane, 8 Dec&#10;PV 4.4 kWh/kWp, wind 19%&#10;Peak gust 13 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 26</td>
+      <td class="cell" tabindex="0" data-tip="50 of 100, moderate&#10;Brisbane, 9 Dec&#10;PV 4.2 kWh/kWp, wind 2%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 50</td>
+      <td class="cell" tabindex="0" data-tip="44 of 100, moderate&#10;Brisbane, 10 Dec&#10;PV 4.9 kWh/kWp, wind 2%&#10;Peak gust 9 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 44</td>
+<td><b>40</b></td></tr><tr><td>Melbourne</td>
+      <td class="cell" tabindex="0" data-tip="43 of 100, moderate&#10;Melbourne, 26 Nov&#10;PV 5.2 kWh/kWp, wind 2%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 43</td>
+      <td class="cell" tabindex="0" data-tip="66 of 100, high&#10;Melbourne, 27 Nov&#10;PV 2.3 kWh/kWp, wind 3%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--high) 55%, var(--surface))">■ 66</td>
+      <td class="cell" tabindex="0" data-tip="35 of 100, moderate&#10;Melbourne, 28 Nov&#10;PV 3.6 kWh/kWp, wind 18%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 35</td>
+      <td class="cell" tabindex="0" data-tip="53 of 100, moderate&#10;Melbourne, 29 Nov&#10;PV 3.0 kWh/kWp, wind 8%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 53</td>
+      <td class="cell" tabindex="0" data-tip="38 of 100, moderate&#10;Melbourne, 30 Nov&#10;PV 3.7 kWh/kWp, wind 14%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 38</td>
+      <td class="cell" tabindex="0" data-tip="43 of 100, moderate&#10;Melbourne, 1 Dec&#10;PV 6.3 kWh/kWp, wind 2%&#10;Peak gust 6 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 43</td>
+      <td class="cell" tabindex="0" data-tip="16 of 100, low&#10;Melbourne, 2 Dec&#10;PV 6.0 kWh/kWp, wind 22%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 16</td>
+      <td class="cell" tabindex="0" data-tip="6 of 100, low&#10;Melbourne, 3 Dec&#10;PV 5.7 kWh/kWp, wind 31%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 6</td>
+      <td class="cell" tabindex="0" data-tip="5 of 100, low&#10;Melbourne, 4 Dec&#10;PV 5.3 kWh/kWp, wind 31%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 5</td>
+      <td class="cell" tabindex="0" data-tip="26 of 100, low&#10;Melbourne, 5 Dec&#10;PV 4.1 kWh/kWp, wind 21%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 26</td>
+      <td class="cell" tabindex="0" data-tip="25 of 100, low&#10;Melbourne, 6 Dec&#10;PV 4.2 kWh/kWp, wind 22%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 25</td>
+      <td class="cell" tabindex="0" data-tip="40 of 100, moderate&#10;Melbourne, 7 Dec&#10;PV 6.4 kWh/kWp, wind 4%&#10;Peak gust 13 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 40</td>
+      <td class="cell" tabindex="0" data-tip="3 of 100, low&#10;Melbourne, 8 Dec&#10;PV 5.8 kWh/kWp, wind 56%&#10;Peak gust 20 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 3</td>
+      <td class="cell" tabindex="0" data-tip="51 of 100, moderate&#10;Melbourne, 9 Dec&#10;PV 2.4 kWh/kWp, wind 13%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 51</td>
+      <td class="cell" tabindex="0" data-tip="56 of 100, moderate&#10;Melbourne, 10 Dec&#10;PV 3.0 kWh/kWp, wind 5%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 56</td>
+<td><b>34</b></td></tr><tr><td>Adelaide</td>
+      <td class="cell" tabindex="0" data-tip="59 of 100, moderate&#10;Adelaide, 26 Nov&#10;PV 3.1 kWh/kWp, wind 2%&#10;Peak gust 8 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 59</td>
+      <td class="cell" tabindex="0" data-tip="46 of 100, moderate&#10;Adelaide, 27 Nov&#10;PV 4.3 kWh/kWp, wind 4%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 46</td>
+      <td class="cell" tabindex="0" data-tip="15 of 100, low&#10;Adelaide, 28 Nov&#10;PV 6.0 kWh/kWp, wind 24%&#10;Peak gust 17 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 15</td>
+      <td class="cell" tabindex="0" data-tip="18 of 100, low&#10;Adelaide, 29 Nov&#10;PV 4.6 kWh/kWp, wind 24%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 18</td>
+      <td class="cell" tabindex="0" data-tip="32 of 100, low&#10;Adelaide, 30 Nov&#10;PV 6.0 kWh/kWp, wind 10%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 32</td>
+      <td class="cell" tabindex="0" data-tip="43 of 100, moderate&#10;Adelaide, 1 Dec&#10;PV 6.3 kWh/kWp, wind 1%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 43</td>
+      <td class="cell" tabindex="0" data-tip="39 of 100, moderate&#10;Adelaide, 2 Dec&#10;PV 6.0 kWh/kWp, wind 5%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 39</td>
+      <td class="cell" tabindex="0" data-tip="34 of 100, low&#10;Adelaide, 3 Dec&#10;PV 5.9 kWh/kWp, wind 9%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 34</td>
+      <td class="cell" tabindex="0" data-tip="40 of 100, moderate&#10;Adelaide, 4 Dec&#10;PV 6.0 kWh/kWp, wind 4%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 40</td>
+      <td class="cell" tabindex="0" data-tip="18 of 100, low&#10;Adelaide, 5 Dec&#10;PV 4.5 kWh/kWp, wind 24%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 18</td>
+      <td class="cell" tabindex="0" data-tip="29 of 100, low&#10;Adelaide, 6 Dec&#10;PV 6.2 kWh/kWp, wind 13%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 29</td>
+      <td class="cell" tabindex="0" data-tip="24 of 100, low&#10;Adelaide, 7 Dec&#10;PV 5.9 kWh/kWp, wind 17%&#10;Peak gust 13 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 24</td>
+      <td class="cell" tabindex="0" data-tip="36 of 100, moderate&#10;Adelaide, 8 Dec&#10;PV 3.1 kWh/kWp, wind 20%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 36</td>
+      <td class="cell" tabindex="0" data-tip="31 of 100, low&#10;Adelaide, 9 Dec&#10;PV 4.0 kWh/kWp, wind 19%&#10;Peak gust 18 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 31</td>
+      <td class="cell" tabindex="0" data-tip="24 of 100, low&#10;Adelaide, 10 Dec&#10;PV 4.6 kWh/kWp, wind 19%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 24</td>
+<td><b>33</b></td></tr><tr><td>Auckland</td>
+      <td class="cell" tabindex="0" data-tip="48 of 100, moderate&#10;Auckland, 26 Nov&#10;PV 3.6 kWh/kWp, wind 7%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 48</td>
+      <td class="cell" tabindex="0" data-tip="40 of 100, moderate&#10;Auckland, 27 Nov&#10;PV 5.1 kWh/kWp, wind 4%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 40</td>
+      <td class="cell" tabindex="0" data-tip="41 of 100, moderate&#10;Auckland, 28 Nov&#10;PV 6.2 kWh/kWp, wind 3%&#10;Peak gust 10 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 41</td>
+      <td class="cell" tabindex="0" data-tip="35 of 100, moderate&#10;Auckland, 29 Nov&#10;PV 4.9 kWh/kWp, wind 8%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 35</td>
+      <td class="cell" tabindex="0" data-tip="40 of 100, moderate&#10;Auckland, 30 Nov&#10;PV 5.3 kWh/kWp, wind 4%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 40</td>
+      <td class="cell" tabindex="0" data-tip="30 of 100, low&#10;Auckland, 1 Dec&#10;PV 1.7 kWh/kWp, wind 50%&#10;Peak gust 17 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 30</td>
+      <td class="cell" tabindex="0" data-tip="3 of 100, low&#10;Auckland, 2 Dec&#10;PV 6.1 kWh/kWp, wind 71%&#10;Peak gust 20 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 3</td>
+      <td class="cell" tabindex="0" data-tip="5 of 100, low&#10;Auckland, 3 Dec&#10;PV 4.4 kWh/kWp, wind 42%&#10;Peak gust 17 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 5</td>
+      <td class="cell" tabindex="0" data-tip="2 of 100, low&#10;Auckland, 4 Dec&#10;PV 5.4 kWh/kWp, wind 34%&#10;Peak gust 17 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 2</td>
+      <td class="cell" tabindex="0" data-tip="28 of 100, low&#10;Auckland, 5 Dec&#10;PV 5.8 kWh/kWp, wind 13%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 28</td>
+      <td class="cell" tabindex="0" data-tip="41 of 100, moderate&#10;Auckland, 6 Dec&#10;PV 5.9 kWh/kWp, wind 3%&#10;Peak gust 12 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 41</td>
+      <td class="cell" tabindex="0" data-tip="34 of 100, low&#10;Auckland, 7 Dec&#10;PV 5.4 kWh/kWp, wind 9%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 34</td>
+      <td class="cell" tabindex="0" data-tip="44 of 100, moderate&#10;Auckland, 8 Dec&#10;PV 3.0 kWh/kWp, wind 15%&#10;Peak gust 13 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 44</td>
+      <td class="cell" tabindex="0" data-tip="40 of 100, moderate&#10;Auckland, 9 Dec&#10;PV 5.2 kWh/kWp, wind 4%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 40</td>
+      <td class="cell" tabindex="0" data-tip="13 of 100, low&#10;Auckland, 10 Dec&#10;PV 5.7 kWh/kWp, wind 25%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 13</td>
+<td><b>30</b></td></tr><tr><td>Sydney</td>
+      <td class="cell" tabindex="0" data-tip="37 of 100, moderate&#10;Sydney, 26 Nov&#10;PV 5.4 kWh/kWp, wind 6%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 37</td>
+      <td class="cell" tabindex="0" data-tip="22 of 100, low&#10;Sydney, 27 Nov&#10;PV 4.8 kWh/kWp, wind 20%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 22</td>
+      <td class="cell" tabindex="0" data-tip="24 of 100, low&#10;Sydney, 28 Nov&#10;PV 3.9 kWh/kWp, wind 24%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 24</td>
+      <td class="cell" tabindex="0" data-tip="30 of 100, low&#10;Sydney, 29 Nov&#10;PV 5.2 kWh/kWp, wind 11%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 30</td>
+      <td class="cell" tabindex="0" data-tip="26 of 100, low&#10;Sydney, 30 Nov&#10;PV 4.6 kWh/kWp, wind 17%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 26</td>
+      <td class="cell" tabindex="0" data-tip="37 of 100, moderate&#10;Sydney, 1 Dec&#10;PV 4.9 kWh/kWp, wind 7%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 37</td>
+      <td class="cell" tabindex="0" data-tip="22 of 100, low&#10;Sydney, 2 Dec&#10;PV 5.9 kWh/kWp, wind 18%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 22</td>
+      <td class="cell" tabindex="0" data-tip="31 of 100, low&#10;Sydney, 3 Dec&#10;PV 5.6 kWh/kWp, wind 11%&#10;Peak gust 13 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 31</td>
+      <td class="cell" tabindex="0" data-tip="35 of 100, moderate&#10;Sydney, 4 Dec&#10;PV 5.4 kWh/kWp, wind 7%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 35</td>
+      <td class="cell" tabindex="0" data-tip="19 of 100, low&#10;Sydney, 5 Dec&#10;PV 5.1 kWh/kWp, wind 20%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 19</td>
+      <td class="cell" tabindex="0" data-tip="21 of 100, low&#10;Sydney, 6 Dec&#10;PV 4.4 kWh/kWp, wind 23%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 21</td>
+      <td class="cell" tabindex="0" data-tip="26 of 100, low&#10;Sydney, 7 Dec&#10;PV 2.6 kWh/kWp, wind 31%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 26</td>
+      <td class="cell" tabindex="0" data-tip="5 of 100, low&#10;Sydney, 8 Dec&#10;PV 4.4 kWh/kWp, wind 44%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 5</td>
+      <td class="cell" tabindex="0" data-tip="1 of 100, low&#10;Sydney, 9 Dec&#10;PV 5.8 kWh/kWp, wind 36%&#10;Peak gust 18 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 1</td>
+      <td class="cell" tabindex="0" data-tip="40 of 100, moderate&#10;Sydney, 10 Dec&#10;PV 5.2 kWh/kWp, wind 4%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--moderate) 38%, var(--surface))">▲ 40</td>
+<td><b>25</b></td></tr><tr><td>Perth</td>
+      <td class="cell" tabindex="0" data-tip="27 of 100, low&#10;Perth, 26 Nov&#10;PV 6.3 kWh/kWp, wind 14%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 27</td>
+      <td class="cell" tabindex="0" data-tip="12 of 100, low&#10;Perth, 27 Nov&#10;PV 6.3 kWh/kWp, wind 26%&#10;Peak gust 17 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 12</td>
+      <td class="cell" tabindex="0" data-tip="29 of 100, low&#10;Perth, 28 Nov&#10;PV 6.2 kWh/kWp, wind 13%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 29</td>
+      <td class="cell" tabindex="0" data-tip="25 of 100, low&#10;Perth, 29 Nov&#10;PV 6.1 kWh/kWp, wind 16%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 25</td>
+      <td class="cell" tabindex="0" data-tip="23 of 100, low&#10;Perth, 30 Nov&#10;PV 3.9 kWh/kWp, wind 25%&#10;Peak gust 13 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 23</td>
+      <td class="cell" tabindex="0" data-tip="14 of 100, low&#10;Perth, 1 Dec&#10;PV 6.2 kWh/kWp, wind 24%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 14</td>
+      <td class="cell" tabindex="0" data-tip="23 of 100, low&#10;Perth, 2 Dec&#10;PV 6.2 kWh/kWp, wind 17%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 23</td>
+      <td class="cell" tabindex="0" data-tip="34 of 100, low&#10;Perth, 3 Dec&#10;PV 5.7 kWh/kWp, wind 9%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 34</td>
+      <td class="cell" tabindex="0" data-tip="29 of 100, low&#10;Perth, 4 Dec&#10;PV 6.1 kWh/kWp, wind 12%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 29</td>
+      <td class="cell" tabindex="0" data-tip="23 of 100, low&#10;Perth, 5 Dec&#10;PV 6.1 kWh/kWp, wind 17%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 23</td>
+      <td class="cell" tabindex="0" data-tip="13 of 100, low&#10;Perth, 6 Dec&#10;PV 6.0 kWh/kWp, wind 26%&#10;Peak gust 19 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 13</td>
+      <td class="cell" tabindex="0" data-tip="0 of 100, low&#10;Perth, 7 Dec&#10;PV 5.2 kWh/kWp, wind 41%&#10;Peak gust 16 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 0</td>
+      <td class="cell" tabindex="0" data-tip="28 of 100, low&#10;Perth, 8 Dec&#10;PV 6.3 kWh/kWp, wind 13%&#10;Peak gust 15 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 28</td>
+      <td class="cell" tabindex="0" data-tip="24 of 100, low&#10;Perth, 9 Dec&#10;PV 6.2 kWh/kWp, wind 16%&#10;Peak gust 14 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 24</td>
+      <td class="cell" tabindex="0" data-tip="31 of 100, low&#10;Perth, 10 Dec&#10;PV 5.9 kWh/kWp, wind 11%&#10;Peak gust 11 m/s"
+        style="background:color-mix(in oklab, var(--low) 14%, var(--surface))">○ 31</td>
+<td><b>22</b></td></tr>    <tr><td class="conf sub">Confidence</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">high</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">medium</td><td class="conf sub">low</td><td class="conf sub">low</td><td class="conf sub">low</td><td class="conf sub">low</td><td></td></tr>
+    </tbody></table></div>
+</section>
+
+<section>
+  <details><summary>All daily values (90 rows)</summary>
+  <div class="scroll"><table>
+    <thead><tr><th>City</th><th>Date</th><th>GHI</th><th>GTI</th><th>PV kWh/kWp</th><th>CF 100 m</th><th>CF 200 m</th><th>W/m² 100 m</th><th>W/m² 200 m</th><th>Gust m/s</th><th>Sun h</th><th>Risk</th><th>Confidence</th></tr></thead>
+    <tbody><tr><td>Adelaide</td><td>2026-11-26</td><td>4.08</td><td>3.76</td><td>3.10</td><td>2%</td><td>4%</td><td>35</td><td>54</td><td>8</td><td>2.6</td><td>59 moderate</td><td>high</td></tr><tr><td>Adelaide</td><td>2026-11-27</td><td>5.86</td><td>5.37</td><td>4.32</td><td>4%</td><td>9%</td><td>58</td><td>110</td><td>12</td><td>11.0</td><td>46 moderate</td><td>high</td></tr><tr><td>Adelaide</td><td>2026-11-28</td><td>8.31</td><td>7.48</td><td>6.01</td><td>24%</td><td>33%</td><td>261</td><td>359</td><td>17</td><td>13.7</td><td>15 low</td><td>high</td></tr><tr><td>Adelaide</td><td>2026-11-29</td><td>6.16</td><td>5.58</td><td>4.63</td><td>24%</td><td>33%</td><td>262</td><td>364</td><td>16</td><td>11.1</td><td>18 low</td><td>high</td></tr><tr><td>Adelaide</td><td>2026-11-30</td><td>8.33</td><td>7.38</td><td>5.96</td><td>10%</td><td>17%</td><td>122</td><td>193</td><td>16</td><td>13.7</td><td>32 low</td><td>high</td></tr><tr><td>Adelaide</td><td>2026-12-01</td><td>9.03</td><td>7.97</td><td>6.26</td><td>1%</td><td>3%</td><td>27</td><td>39</td><td>10</td><td>13.5</td><td>43 moderate</td><td>high</td></tr><tr><td>Adelaide</td><td>2026-12-02</td><td>8.97</td><td>7.82</td><td>6.01</td><td>5%</td><td>9%</td><td>65</td><td>107</td><td>12</td><td>14.1</td><td>39 moderate</td><td>high</td></tr><tr><td>Adelaide</td><td>2026-12-03</td><td>8.89</td><td>7.78</td><td>5.87</td><td>9%</td><td>19%</td><td>109</td><td>212</td><td>14</td><td>14.0</td><td>34 low</td><td>medium</td></tr><tr><td>Adelaide</td><td>2026-12-04</td><td>8.66</td><td>7.51</td><td>5.96</td><td>4%</td><td>7%</td><td>61</td><td>86</td><td>11</td><td>14.1</td><td>40 moderate</td><td>medium</td></tr><tr><td>Adelaide</td><td>2026-12-05</td><td>6.23</td><td>5.49</td><td>4.53</td><td>24%</td><td>31%</td><td>268</td><td>343</td><td>16</td><td>10.9</td><td>18 low</td><td>medium</td></tr><tr><td>Adelaide</td><td>2026-12-06</td><td>8.78</td><td>7.68</td><td>6.16</td><td>13%</td><td>20%</td><td>147</td><td>224</td><td>15</td><td>13.8</td><td>29 low</td><td>medium</td></tr><tr><td>Adelaide</td><td>2026-12-07</td><td>8.79</td><td>7.53</td><td>5.91</td><td>17%</td><td>42%</td><td>189</td><td>474</td><td>13</td><td>14.3</td><td>24 low</td><td>low</td></tr><tr><td>Adelaide</td><td>2026-12-08</td><td>4.45</td><td>3.87</td><td>3.15</td><td>20%</td><td>38%</td><td>224</td><td>508</td><td>14</td><td>8.0</td><td>36 moderate</td><td>low</td></tr><tr><td>Adelaide</td><td>2026-12-09</td><td>5.58</td><td>4.84</td><td>4.03</td><td>19%</td><td>28%</td><td>210</td><td>310</td><td>18</td><td>13.8</td><td>31 low</td><td>low</td></tr><tr><td>Adelaide</td><td>2026-12-10</td><td>6.28</td><td>5.54</td><td>4.58</td><td>19%</td><td>n/a</td><td>213</td><td>n/a</td><td>15</td><td>13.8</td><td>24 low</td><td>low</td></tr><tr><td>Auckland</td><td>2026-11-26</td><td>5.05</td><td>4.36</td><td>3.65</td><td>7%</td><td>14%</td><td>91</td><td>167</td><td>12</td><td>9.2</td><td>48 moderate</td><td>high</td></tr><tr><td>Auckland</td><td>2026-11-27</td><td>7.07</td><td>6.27</td><td>5.12</td><td>4%</td><td>8%</td><td>56</td><td>96</td><td>10</td><td>14.0</td><td>40 moderate</td><td>high</td></tr><tr><td>Auckland</td><td>2026-11-28</td><td>8.62</td><td>7.71</td><td>6.18</td><td>3%</td><td>6%</td><td>44</td><td>79</td><td>10</td><td>14.0</td><td>41 moderate</td><td>high</td></tr><tr><td>Auckland</td><td>2026-11-29</td><td>6.69</td><td>6.04</td><td>4.93</td><td>8%</td><td>11%</td><td>97</td><td>128</td><td>14</td><td>11.9</td><td>35 moderate</td><td>high</td></tr><tr><td>Auckland</td><td>2026-11-30</td><td>7.34</td><td>6.50</td><td>5.29</td><td>4%</td><td>6%</td><td>59</td><td>79</td><td>12</td><td>14.0</td><td>40 moderate</td><td>high</td></tr><tr><td>Auckland</td><td>2026-12-01</td><td>2.25</td><td>2.00</td><td>1.73</td><td>50%</td><td>76%</td><td>574</td><td>948</td><td>17</td><td>2.6</td><td>30 low</td><td>high</td></tr><tr><td>Auckland</td><td>2026-12-02</td><td>8.59</td><td>7.49</td><td>6.10</td><td>71%</td><td>87%</td><td>764</td><td>1202</td><td>20</td><td>14.0</td><td>3 low</td><td>high</td></tr><tr><td>Auckland</td><td>2026-12-03</td><td>6.01</td><td>5.33</td><td>4.45</td><td>42%</td><td>66%</td><td>449</td><td>703</td><td>17</td><td>14.0</td><td>5 low</td><td>medium</td></tr><tr><td>Auckland</td><td>2026-12-04</td><td>7.57</td><td>6.61</td><td>5.37</td><td>34%</td><td>58%</td><td>366</td><td>618</td><td>17</td><td>14.0</td><td>2 low</td><td>medium</td></tr><tr><td>Auckland</td><td>2026-12-05</td><td>8.20</td><td>7.18</td><td>5.77</td><td>13%</td><td>22%</td><td>155</td><td>247</td><td>15</td><td>14.0</td><td>28 low</td><td>medium</td></tr><tr><td>Auckland</td><td>2026-12-06</td><td>8.56</td><td>7.44</td><td>5.94</td><td>3%</td><td>7%</td><td>51</td><td>90</td><td>12</td><td>14.1</td><td>41 moderate</td><td>medium</td></tr><tr><td>Auckland</td><td>2026-12-07</td><td>7.69</td><td>6.70</td><td>5.42</td><td>9%</td><td>16%</td><td>110</td><td>184</td><td>16</td><td>14.0</td><td>34 low</td><td>low</td></tr><tr><td>Auckland</td><td>2026-12-08</td><td>3.87</td><td>3.50</td><td>2.97</td><td>15%</td><td>27%</td><td>170</td><td>302</td><td>13</td><td>6.4</td><td>44 moderate</td><td>low</td></tr><tr><td>Auckland</td><td>2026-12-09</td><td>7.35</td><td>6.37</td><td>5.24</td><td>4%</td><td>9%</td><td>56</td><td>111</td><td>11</td><td>14.1</td><td>40 moderate</td><td>low</td></tr><tr><td>Auckland</td><td>2026-12-10</td><td>8.13</td><td>7.05</td><td>5.68</td><td>25%</td><td>44%</td><td>276</td><td>478</td><td>16</td><td>14.0</td><td>13 low</td><td>low</td></tr><tr><td>Brisbane</td><td>2026-11-26</td><td>6.17</td><td>5.57</td><td>4.50</td><td>6%</td><td>14%</td><td>74</td><td>158</td><td>9</td><td>12.9</td><td>42 moderate</td><td>high</td></tr><tr><td>Brisbane</td><td>2026-11-27</td><td>5.94</td><td>5.57</td><td>4.46</td><td>6%</td><td>14%</td><td>76</td><td>163</td><td>10</td><td>8.6</td><td>42 moderate</td><td>high</td></tr><tr><td>Brisbane</td><td>2026-11-28</td><td>7.35</td><td>6.70</td><td>5.28</td><td>11%</td><td>21%</td><td>126</td><td>237</td><td>12</td><td>12.0</td><td>31 low</td><td>high</td></tr><tr><td>Brisbane</td><td>2026-11-29</td><td>3.27</td><td>3.05</td><td>2.53</td><td>5%</td><td>14%</td><td>63</td><td>160</td><td>10</td><td>4.4</td><td>61 high</td><td>high</td></tr><tr><td>Brisbane</td><td>2026-11-30</td><td>8.04</td><td>7.15</td><td>5.56</td><td>7%</td><td>19%</td><td>84</td><td>217</td><td>11</td><td>13.1</td><td>36 moderate</td><td>high</td></tr><tr><td>Brisbane</td><td>2026-12-01</td><td>7.24</td><td>6.50</td><td>5.19</td><td>16%</td><td>31%</td><td>179</td><td>335</td><td>14</td><td>13.0</td><td>25 low</td><td>high</td></tr><tr><td>Brisbane</td><td>2026-12-02</td><td>6.56</td><td>5.88</td><td>4.76</td><td>4%</td><td>9%</td><td>59</td><td>113</td><td>9</td><td>13.0</td><td>42 moderate</td><td>high</td></tr><tr><td>Brisbane</td><td>2026-12-03</td><td>6.85</td><td>6.08</td><td>4.89</td><td>2%</td><td>5%</td><td>31</td><td>64</td><td>8</td><td>13.3</td><td>44 moderate</td><td>medium</td></tr><tr><td>Brisbane</td><td>2026-12-04</td><td>7.70</td><td>6.77</td><td>5.37</td><td>3%</td><td>7%</td><td>39</td><td>80</td><td>10</td><td>13.3</td><td>41 moderate</td><td>medium</td></tr><tr><td>Brisbane</td><td>2026-12-05</td><td>7.99</td><td>7.12</td><td>5.60</td><td>6%</td><td>15%</td><td>78</td><td>175</td><td>10</td><td>13.0</td><td>37 moderate</td><td>medium</td></tr><tr><td>Brisbane</td><td>2026-12-06</td><td>8.71</td><td>7.61</td><td>5.90</td><td>5%</td><td>13%</td><td>67</td><td>154</td><td>10</td><td>13.3</td><td>38 moderate</td><td>medium</td></tr><tr><td>Brisbane</td><td>2026-12-07</td><td>6.06</td><td>5.46</td><td>4.36</td><td>2%</td><td>6%</td><td>35</td><td>76</td><td>10</td><td>13.2</td><td>48 moderate</td><td>low</td></tr><tr><td>Brisbane</td><td>2026-12-08</td><td>5.96</td><td>5.45</td><td>4.41</td><td>19%</td><td>38%</td><td>214</td><td>410</td><td>13</td><td>11.5</td><td>26 low</td><td>low</td></tr><tr><td>Brisbane</td><td>2026-12-09</td><td>5.78</td><td>5.15</td><td>4.19</td><td>2%</td><td>7%</td><td>36</td><td>86</td><td>10</td><td>13.0</td><td>50 moderate</td><td>low</td></tr><tr><td>Brisbane</td><td>2026-12-10</td><td>6.74</td><td>6.02</td><td>4.85</td><td>2%</td><td>n/a</td><td>31</td><td>n/a</td><td>9</td><td>13.3</td><td>44 moderate</td><td>low</td></tr><tr><td>Melbourne</td><td>2026-11-26</td><td>7.20</td><td>6.46</td><td>5.16</td><td>2%</td><td>4%</td><td>27</td><td>49</td><td>10</td><td>12.5</td><td>43 moderate</td><td>high</td></tr><tr><td>Melbourne</td><td>2026-11-27</td><td>2.93</td><td>2.67</td><td>2.25</td><td>3%</td><td>8%</td><td>47</td><td>101</td><td>10</td><td>1.3</td><td>66 high</td><td>high</td></tr><tr><td>Melbourne</td><td>2026-11-28</td><td>4.88</td><td>4.28</td><td>3.55</td><td>18%</td><td>34%</td><td>208</td><td>436</td><td>15</td><td>8.0</td><td>35 moderate</td><td>high</td></tr><tr><td>Melbourne</td><td>2026-11-29</td><td>3.86</td><td>3.49</td><td>2.98</td><td>8%</td><td>15%</td><td>96</td><td>172</td><td>12</td><td>5.2</td><td>53 moderate</td><td>high</td></tr><tr><td>Melbourne</td><td>2026-11-30</td><td>4.91</td><td>4.37</td><td>3.72</td><td>14%</td><td>27%</td><td>166</td><td>299</td><td>12</td><td>9.9</td><td>38 moderate</td><td>high</td></tr><tr><td>Melbourne</td><td>2026-12-01</td><td>8.71</td><td>7.79</td><td>6.27</td><td>2%</td><td>6%</td><td>24</td><td>68</td><td>6</td><td>13.8</td><td>43 moderate</td><td>high</td></tr><tr><td>Melbourne</td><td>2026-12-02</td><td>8.78</td><td>7.69</td><td>5.99</td><td>22%</td><td>51%</td><td>247</td><td>548</td><td>15</td><td>14.1</td><td>16 low</td><td>high</td></tr><tr><td>Melbourne</td><td>2026-12-03</td><td>8.45</td><td>7.32</td><td>5.68</td><td>31%</td><td>52%</td><td>334</td><td>652</td><td>15</td><td>14.2</td><td>6 low</td><td>medium</td></tr><tr><td>Melbourne</td><td>2026-12-04</td><td>7.44</td><td>6.56</td><td>5.29</td><td>31%</td><td>37%</td><td>392</td><td>920</td><td>16</td><td>14.0</td><td>5 low</td><td>medium</td></tr><tr><td>Melbourne</td><td>2026-12-05</td><td>5.58</td><td>4.90</td><td>4.07</td><td>21%</td><td>31%</td><td>233</td><td>335</td><td>15</td><td>13.9</td><td>26 low</td><td>medium</td></tr><tr><td>Melbourne</td><td>2026-12-06</td><td>5.87</td><td>4.96</td><td>4.19</td><td>22%</td><td>34%</td><td>241</td><td>371</td><td>15</td><td>14.1</td><td>25 low</td><td>medium</td></tr><tr><td>Melbourne</td><td>2026-12-07</td><td>9.31</td><td>8.03</td><td>6.42</td><td>4%</td><td>7%</td><td>51</td><td>87</td><td>13</td><td>14.2</td><td>40 moderate</td><td>low</td></tr><tr><td>Melbourne</td><td>2026-12-08</td><td>8.37</td><td>7.47</td><td>5.78</td><td>56%</td><td>77%</td><td>626</td><td>1079</td><td>20</td><td>11.5</td><td>3 low</td><td>low</td></tr><tr><td>Melbourne</td><td>2026-12-09</td><td>3.13</td><td>2.84</td><td>2.43</td><td>13%</td><td>31%</td><td>155</td><td>341</td><td>15</td><td>0.0</td><td>51 moderate</td><td>low</td></tr><tr><td>Melbourne</td><td>2026-12-10</td><td>3.90</td><td>3.51</td><td>3.00</td><td>5%</td><td>5%</td><td>70</td><td>72</td><td>10</td><td>4.0</td><td>56 moderate</td><td>low</td></tr><tr><td>Perth</td><td>2026-11-26</td><td>8.97</td><td>7.94</td><td>6.32</td><td>14%</td><td>22%</td><td>159</td><td>245</td><td>14</td><td>13.8</td><td>27 low</td><td>high</td></tr><tr><td>Perth</td><td>2026-11-27</td><td>8.96</td><td>7.92</td><td>6.28</td><td>26%</td><td>48%</td><td>289</td><td>516</td><td>17</td><td>13.9</td><td>12 low</td><td>high</td></tr><tr><td>Perth</td><td>2026-11-28</td><td>8.97</td><td>7.90</td><td>6.24</td><td>13%</td><td>30%</td><td>149</td><td>326</td><td>14</td><td>13.9</td><td>29 low</td><td>high</td></tr><tr><td>Perth</td><td>2026-11-29</td><td>9.04</td><td>7.94</td><td>6.05</td><td>16%</td><td>43%</td><td>181</td><td>479</td><td>11</td><td>13.9</td><td>25 low</td><td>high</td></tr><tr><td>Perth</td><td>2026-11-30</td><td>5.49</td><td>4.91</td><td>3.87</td><td>25%</td><td>44%</td><td>279</td><td>608</td><td>13</td><td>9.7</td><td>23 low</td><td>high</td></tr><tr><td>Perth</td><td>2026-12-01</td><td>8.91</td><td>7.79</td><td>6.17</td><td>24%</td><td>47%</td><td>268</td><td>507</td><td>15</td><td>13.9</td><td>14 low</td><td>high</td></tr><tr><td>Perth</td><td>2026-12-02</td><td>8.81</td><td>7.72</td><td>6.15</td><td>17%</td><td>26%</td><td>192</td><td>292</td><td>16</td><td>13.9</td><td>23 low</td><td>high</td></tr><tr><td>Perth</td><td>2026-12-03</td><td>8.17</td><td>7.14</td><td>5.74</td><td>9%</td><td>14%</td><td>107</td><td>157</td><td>14</td><td>13.9</td><td>34 low</td><td>medium</td></tr><tr><td>Perth</td><td>2026-12-04</td><td>8.93</td><td>7.73</td><td>6.14</td><td>12%</td><td>24%</td><td>144</td><td>268</td><td>15</td><td>13.9</td><td>29 low</td><td>medium</td></tr><tr><td>Perth</td><td>2026-12-05</td><td>9.03</td><td>7.80</td><td>6.07</td><td>17%</td><td>36%</td><td>193</td><td>390</td><td>15</td><td>13.9</td><td>23 low</td><td>medium</td></tr><tr><td>Perth</td><td>2026-12-06</td><td>8.73</td><td>7.58</td><td>5.95</td><td>26%</td><td>42%</td><td>282</td><td>505</td><td>19</td><td>13.9</td><td>13 low</td><td>medium</td></tr><tr><td>Perth</td><td>2026-12-07</td><td>7.02</td><td>6.35</td><td>5.18</td><td>41%</td><td>58%</td><td>448</td><td>625</td><td>16</td><td>12.9</td><td>0 low</td><td>low</td></tr><tr><td>Perth</td><td>2026-12-08</td><td>9.19</td><td>7.91</td><td>6.32</td><td>13%</td><td>23%</td><td>157</td><td>252</td><td>15</td><td>13.9</td><td>28 low</td><td>low</td></tr><tr><td>Perth</td><td>2026-12-09</td><td>9.22</td><td>7.92</td><td>6.17</td><td>16%</td><td>34%</td><td>186</td><td>373</td><td>14</td><td>13.9</td><td>24 low</td><td>low</td></tr><tr><td>Perth</td><td>2026-12-10</td><td>9.08</td><td>7.80</td><td>5.93</td><td>11%</td><td>n/a</td><td>131</td><td>n/a</td><td>11</td><td>13.9</td><td>31 low</td><td>low</td></tr><tr><td>Sydney</td><td>2026-11-26</td><td>7.52</td><td>6.71</td><td>5.39</td><td>6%</td><td>11%</td><td>76</td><td>130</td><td>11</td><td>13.2</td><td>37 moderate</td><td>high</td></tr><tr><td>Sydney</td><td>2026-11-27</td><td>6.54</td><td>5.89</td><td>4.76</td><td>20%</td><td>36%</td><td>224</td><td>393</td><td>15</td><td>12.1</td><td>22 low</td><td>high</td></tr><tr><td>Sydney</td><td>2026-11-28</td><td>5.22</td><td>4.88</td><td>3.89</td><td>24%</td><td>52%</td><td>264</td><td>563</td><td>16</td><td>5.9</td><td>24 low</td><td>high</td></tr><tr><td>Sydney</td><td>2026-11-29</td><td>7.30</td><td>6.55</td><td>5.24</td><td>11%</td><td>25%</td><td>132</td><td>290</td><td>11</td><td>13.0</td><td>30 low</td><td>high</td></tr><tr><td>Sydney</td><td>2026-11-30</td><td>6.29</td><td>5.64</td><td>4.63</td><td>17%</td><td>26%</td><td>196</td><td>283</td><td>16</td><td>12.4</td><td>26 low</td><td>high</td></tr><tr><td>Sydney</td><td>2026-12-01</td><td>6.73</td><td>6.04</td><td>4.93</td><td>7%</td><td>13%</td><td>88</td><td>147</td><td>11</td><td>11.8</td><td>37 moderate</td><td>high</td></tr><tr><td>Sydney</td><td>2026-12-02</td><td>8.53</td><td>7.45</td><td>5.87</td><td>18%</td><td>41%</td><td>201</td><td>523</td><td>16</td><td>13.8</td><td>22 low</td><td>high</td></tr><tr><td>Sydney</td><td>2026-12-03</td><td>8.22</td><td>7.15</td><td>5.55</td><td>11%</td><td>28%</td><td>126</td><td>310</td><td>13</td><td>13.8</td><td>31 low</td><td>medium</td></tr><tr><td>Sydney</td><td>2026-12-04</td><td>7.95</td><td>7.11</td><td>5.44</td><td>7%</td><td>15%</td><td>94</td><td>171</td><td>11</td><td>12.9</td><td>35 moderate</td><td>medium</td></tr><tr><td>Sydney</td><td>2026-12-05</td><td>7.71</td><td>6.78</td><td>5.15</td><td>20%</td><td>39%</td><td>227</td><td>418</td><td>16</td><td>13.4</td><td>19 low</td><td>medium</td></tr><tr><td>Sydney</td><td>2026-12-06</td><td>5.88</td><td>5.36</td><td>4.38</td><td>23%</td><td>35%</td><td>258</td><td>385</td><td>15</td><td>11.5</td><td>21 low</td><td>medium</td></tr><tr><td>Sydney</td><td>2026-12-07</td><td>3.33</td><td>3.07</td><td>2.61</td><td>31%</td><td>46%</td><td>341</td><td>499</td><td>16</td><td>0.4</td><td>26 low</td><td>low</td></tr><tr><td>Sydney</td><td>2026-12-08</td><td>6.15</td><td>5.39</td><td>4.41</td><td>44%</td><td>62%</td><td>474</td><td>740</td><td>16</td><td>13.8</td><td>5 low</td><td>low</td></tr><tr><td>Sydney</td><td>2026-12-09</td><td>8.52</td><td>7.38</td><td>5.82</td><td>36%</td><td>65%</td><td>392</td><td>948</td><td>18</td><td>13.9</td><td>1 low</td><td>low</td></tr><tr><td>Sydney</td><td>2026-12-10</td><td>7.40</td><td>6.48</td><td>5.15</td><td>4%</td><td>6%</td><td>59</td><td>79</td><td>15</td><td>13.9</td><td>40 moderate</td><td>low</td></tr></tbody>
+  </table></div></details>
+</section>
+
+<section>
+  <h2>How to read these numbers</h2>
+  <ul>
+    <li>City-centre forecasts over about two weeks. They compare near-term conditions and are not a site or long-term resource assessment.</li>
+    <li>PV yield = GTI × 0.86 system efficiency, corrected -0.35% per °C of cell temperature above 25 °C.</li>
+    <li>Wind uses a generic power curve: cut-in 3.0, rated 12.0, cut-out 25.0 m/s, corrected for air density. The 200 m figure applies the same turbine at that height.</li>
+    <li>The API returns 100 m and 200 m wind but does not list them in its documentation. The 100 m values track the midpoint of the documented 80 m and 120 m values, so treat both heights as model estimates.</li>
+    <li>Confidence is a label by lead time only: high to 6 days, medium to 10, low beyond.</li>
+  </ul>
+  <p class="sub" style="margin-top:14px">Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a>, CC BY 4.0.</p>
+</section>
+</main>
+<div id="tip" role="status"></div>
+<script>
+const tip = document.getElementById('tip');
+function show(text, x, y) {
+  tip.textContent = text; tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.min(x + 14, innerWidth - r.width - 8) + 'px';
+  tip.style.top = (y + r.height + 20 > innerHeight ? y - r.height - 10 : y + 14) + 'px';
+}
+const hide = () => { tip.style.display = 'none'; };
+document.querySelectorAll('[data-tip]').forEach(el => {
+  el.addEventListener('pointermove', e => show(el.dataset.tip, e.clientX, e.clientY));
+  el.addEventListener('pointerleave', hide);
+  el.addEventListener('focus', () => { const r = el.getBoundingClientRect(); show(el.dataset.tip, r.left, r.bottom); });
+  el.addEventListener('blur', hide);
+});
+document.querySelectorAll('svg[data-values]').forEach(svg => {
+  const rows = JSON.parse(svg.dataset.values), cross = svg.querySelector('.cross');
+  svg.addEventListener('pointermove', e => {
+    const b = svg.getBoundingClientRect(), x = (e.clientX - b.left) / b.width * 300;
+    const h = Math.max(0, Math.min(23, Math.round((x - 34) / 256 * 23))), r = rows.find(v => v[0] === h);
+    if (!r) return hide();
+    const cx = 34 + h * 256 / 23;
+    cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.style.display = '';
+    show(`${svg.dataset.city}, ${String(h).padStart(2, '0')}:00\n${(r[1] * 100).toFixed(0)}% solar\n${(r[2] * 100).toFixed(0)}% wind`, e.clientX, e.clientY);
+  });
+  svg.addEventListener('pointerleave', () => { hide(); cross.style.display = 'none'; });
+});
+</script>
+</body>
+</html>

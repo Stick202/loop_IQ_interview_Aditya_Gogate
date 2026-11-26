@@ -1,0 +1,25 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze
+    description: Raw API responses, loaded unchanged by pipeline/load.py. Append-only.
+    tables:
+      - name: raw_open_meteo
+        description: One row per run, endpoint (hourly or daily) and location.
+        columns:
+          - name: payload
+            description: Response body exactly as returned.
+            data_tests: [not_null]
+          - name: http_status
+            data_tests:
+              - accepted_values:
+                  arguments: {values: [200], quote: false}
+          - name: endpoint
+            data_tests:
+              - accepted_values:
+                  arguments: {values: ["hourly", "daily"]}
+          - name: location_id
+            data_tests:
+              - relationships:
+                  arguments: {to: ref('locations'), field: location_id}

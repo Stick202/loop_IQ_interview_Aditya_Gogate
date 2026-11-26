@@ -1,0 +1,38 @@
+# Locations live in dbt/seeds/locations.csv, shared by ingestion and dim_location.
+api:
+  base_url: https://api.open-meteo.com/v1/forecast
+  timeout_seconds: 30
+  max_attempts: 5
+  backoff_seconds: 1.0
+  forecast_days: 16
+  # One past day: the local day starts before UTC midnight in every configured city.
+  past_days: 1
+
+# variable: expected unit. Open-Meteo answers an unknown variable with HTTP 200,
+# nulls and the unit "undefined", so units are checked on every response.
+hourly:
+  temperature_2m: "°C"
+  surface_pressure: hPa
+  cloud_cover: "%"
+  shortwave_radiation: W/m²            # GHI, mean of the preceding hour
+  direct_normal_irradiance: W/m²
+  diffuse_radiation: W/m²
+  global_tilted_irradiance: W/m²       # GTI, uses tilt/azimuth per location
+  wind_speed_10m: m/s
+  wind_speed_80m: m/s
+  wind_speed_100m: m/s
+  wind_speed_120m: m/s
+  wind_speed_200m: m/s
+  wind_direction_100m: "°"
+  wind_gusts_10m: m/s
+
+daily:
+  temperature_2m_max: "°C"
+  temperature_2m_min: "°C"
+  sunrise: unixtime
+  sunset: unixtime
+  daylight_duration: s
+  sunshine_duration: s
+  shortwave_radiation_sum: MJ/m²
+  wind_speed_10m_max: m/s
+  wind_gusts_10m_max: m/s

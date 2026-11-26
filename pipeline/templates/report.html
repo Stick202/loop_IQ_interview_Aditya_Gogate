@@ -1,0 +1,225 @@
+{% macro pct(v, d=0) %}{{ '%.*f%%'|format(d, v * 100) if v is not none else 'n/a' }}{% endmacro %}
+{% macro num(v, d=1) %}{{ '%.*f'|format(d, v) if v is not none else 'n/a' }}{% endmacro %}
+{% macro day(d) %}{{ d.day }} {{ d.strftime('%b') }}{% endmacro %}
+{% set glyph = {'low': '○', 'moderate': '▲', 'high': '■'} %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar and Wind Outlook</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f9; --surface: #ffffff; --ink: #191919; --ink-2: #666666;
+  --grid: #e7e7e7; --axis: #c2c2c2; --ring: rgba(11,11,11,.10);
+  --wind: #257de0; --wind-soft: #84b9f3; --solar: #f47230;
+  --low: #0aac23; --moderate: #fbb315; --high: #dc3c3d;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0b0b0b; --surface: #191919; --ink: #efefef; --ink-2: #9c9c9c;
+    --grid: #303030; --axis: #474747; --ring: rgba(255,255,255,.10);
+    --wind: #338ced; --wind-soft: #1757ac; --solar: #e76624;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0 0 4px; }
+h2 { font-size: 18px; margin: 0 0 4px; }
+p { margin: 0 0 12px; max-width: 72ch; }
+.sub { color: var(--ink-2); }
+section { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px;
+  padding: 20px; margin-top: 20px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;
+  margin-top: 22px; }
+.tile { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 16px; }
+.tile b { display: block; font-size: 26px; font-weight: 600; line-height: 1.25; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 14px; }
+th, td { padding: 7px 10px; text-align: right; white-space: nowrap; }
+th { color: var(--ink-2); font-weight: 500; font-size: 13px; }
+th:first-child, td:first-child { text-align: left; }
+tbody tr + tr td { border-top: 1px solid var(--grid); }
+.barcell { width: 46%; min-width: 220px; text-align: left; }
+.bar { height: 14px; border-radius: 0 4px 4px 0; }
+.bar + .bar { margin-top: 2px; }
+.heat { border-collapse: separate; border-spacing: 2px; }
+.heat td, .heat th { padding: 6px 5px; font-size: 13px; text-align: center; }
+.heat tbody tr + tr td { border-top: 0; }
+.heat td:first-child { position: sticky; left: 0; background: var(--surface); padding-right: 12px; }
+.heat td.cell { border-radius: 4px; min-width: 46px; }
+.heat td.cell:hover, .heat td.cell:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
+.heat .conf { font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ink-2); font-size: 13px; margin: 0 0 10px; }
+.legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 6px; }
+.legend i.line { height: 3px; vertical-align: middle; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; }
+.panel h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.panel svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+svg text { fill: var(--ink-2); font-size: 10px; font-variant-numeric: tabular-nums; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--ring);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18); border-radius: 6px; padding: 8px 10px; font-size: 13px;
+  white-space: pre-line; display: none; z-index: 5; }
+details summary { cursor: pointer; font-weight: 600; }
+details .scroll { margin-top: 12px; max-height: 460px; overflow: auto; }
+ul { margin: 8px 0 0; padding-left: 20px; } li { margin-bottom: 6px; max-width: 80ch; }
+</style>
+</head>
+<body>
+<main>
+<h1>Solar and wind outlook</h1>
+<p class="sub">{{ outlook|length }} cities, {{ day(start) }} to {{ day(end) }} {{ end.year }} ({{ days }} complete local days).
+Open-Meteo forecast retrieved {{ issued.strftime('%d %b %Y %H:%M') }} UTC.</p>
+
+<div class="tiles">
+  <div class="tile"><span>Best solar yield</span><b>{{ by_solar[0].city }}</b>
+    <span>{{ num(by_solar[0].pv_yield_kwh_kwp_day) }} kWh per kWp a day</span></div>
+  <div class="tile"><span>Best wind at 100 m</span><b>{{ by_wind[0].city }}</b>
+    <span>{% if days_200m %}{{ pct(by_wind[0].wind_cf_100m_matched) }} capacity factor, {{ pct(by_wind[0].wind_cf_200m_matched) }} at 200 m{% else %}{{ pct(by_wind[0].wind_cf_100m) }} capacity factor{% endif %}</span></div>
+  <div class="tile"><span>200 m against 100 m</span><b>{% if uplift is not none %}{{ '%+.0f%%'|format(uplift * 100) }}{% else %}n/a{% endif %}</b>
+    <span>wind output, all cities, {{ days_200m }} matched days</span></div>
+  <div class="tile"><span>Highest supply risk</span><b>{{ peak.city }}, {{ day(peak.local_date) }}</b>
+    <span>score {{ num(peak.supply_risk_score, 0) }} of 100, {{ peak.forecast_confidence }} forecast confidence</span></div>
+</div>
+
+<section>
+  <h2>Solar yield potential</h2>
+  <p class="sub">Average daily PV yield per kWp, from irradiance on a north-facing panel tilted near latitude (GTI).
+  {% if gti_below_ghi %}GTI is below GHI in every city: the sun is high at this time of year, so a flatter panel would collect more.{% endif %}</p>
+  <div class="scroll"><table>
+    <thead><tr><th>City</th><th class="barcell">PV yield</th><th>kWh/kWp/day</th><th>GHI kWh/m²/day</th><th>GTI kWh/m²/day</th><th>Tilt</th></tr></thead>
+    <tbody>{% for o in by_solar %}
+      <tr><td>{{ o.city }}</td>
+        <td class="barcell"><div class="bar" style="width:{{ num(o.pv_yield_kwh_kwp_day / by_solar[0].pv_yield_kwh_kwp_day * 100) }}%;background:var(--solar)"></div></td>
+        <td>{{ num(o.pv_yield_kwh_kwp_day, 2) }}</td><td>{{ num(o.ghi_kwh_m2_day, 2) }}</td><td>{{ num(o.gti_kwh_m2_day, 2) }}</td><td>{{ o.panel_tilt_deg }}°</td></tr>
+    {% endfor %}</tbody></table></div>
+</section>
+
+<section>
+  <h2>Wind potential at 100 m and 200 m</h2>
+  <p class="sub">Capacity factor of a generic turbine, and the power in the wind per m² of rotor.
+  Both heights use the same {{ days_200m }} days, because the 200 m forecast ends earlier.</p>
+  {% if days_200m %}
+  <div class="legend"><span><i style="background:var(--wind-soft)"></i>100 m</span><span><i style="background:var(--wind)"></i>200 m</span></div>
+  {% set wmax = outlook|map(attribute='wind_cf_200m_matched')|max or 1 %}
+  <div class="scroll"><table>
+    <thead><tr><th>City</th><th class="barcell">Capacity factor</th><th>100 m</th><th>200 m</th><th>W/m² 100 m</th><th>W/m² 200 m</th></tr></thead>
+    <tbody>{% for o in by_wind %}
+      <tr><td>{{ o.city }}</td>
+        <td class="barcell"><div class="bar" style="width:{{ num([o.wind_cf_100m_matched / wmax, 1]|min * 100) }}%;background:var(--wind-soft)"></div>
+          <div class="bar" style="width:{{ num(o.wind_cf_200m_matched / wmax * 100) }}%;background:var(--wind)"></div></td>
+        <td>{{ pct(o.wind_cf_100m_matched) }}</td><td>{{ pct(o.wind_cf_200m_matched) }}</td>
+        <td>{{ num(o.wind_power_density_100m_matched_wm2, 0) }}</td><td>{{ num(o.wind_power_density_200m_matched_wm2, 0) }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}<p>No day has complete 200 m data for every city.</p>{% endif %}
+</section>
+
+{% macro heat(title, note, field, unit, hue, peakv, kind) %}
+<section>
+  <h2>{{ title }}</h2><p class="sub">{{ note }}</p>
+  <div class="scroll"><table class="heat">
+    <thead><tr><th></th>{% for d in dates %}<th>{{ d.strftime('%a') }}<br>{{ day(d) }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for city in grid|sort %}<tr><td>{{ city }}</td>
+      {% for d in dates %}{% set r = grid[city][d] %}{% set v = r[field] %}
+      {% set text = pct(v) if kind == 'pct' else num(v) %}
+      <td class="cell" tabindex="0" data-tip="{{ text }}{{ unit }}&#10;{{ city }}, {{ day(d) }}&#10;{{ r.forecast_confidence }} confidence"
+        style="background:color-mix(in oklab, {{ hue }} {{ (v / peakv * 70)|round|int }}%, var(--surface))">{{ text }}</td>
+      {% endfor %}</tr>{% endfor %}
+    <tr><td class="conf sub">Confidence</td>{% for d in dates %}<td class="conf sub">{{ confidence[d] }}</td>{% endfor %}</tr>
+    </tbody></table></div>
+</section>
+{% endmacro %}
+{{ heat('Daily PV yield', 'kWh per kWp. Stronger colour is more.', 'pv_yield_kwh_kwp', ' kWh/kWp', 'var(--solar)', max_pv, 'num') }}
+{{ heat('Daily wind capacity factor, 100 m', 'Share of rated output. Stronger colour is more.', 'wind_cf_100m', '', 'var(--wind)', max_wind, 'pct') }}
+
+<section>
+  <h2>Average day: when each city generates</h2>
+  <p class="sub">Output as a share of installed capacity by local hour. Where wind holds up overnight, the two complement each other.</p>
+  <div class="legend"><span><i class="line" style="background:var(--solar)"></i>Solar</span><span><i class="line" style="background:var(--wind)"></i>Wind, 100 m</span></div>
+  <div class="panels">{% for p in panels %}
+    <div class="panel"><h3>{{ p.city }}</h3>
+    <svg viewBox="0 0 300 140" role="img" aria-label="{{ p.city }}: average solar and wind output by hour" data-values='{{ p['values']|tojson }}' data-city="{{ p.city }}">
+      {% for t in [0, 0.5, 1] %}{% set y = 120 - t * 110 %}
+      <line x1="34" x2="290" y1="{{ y }}" y2="{{ y }}" stroke="var({{ '--axis' if t == 0 else '--grid' }})"/>
+      <text x="29" y="{{ y + 3 }}" text-anchor="end">{{ pct(t * top) }}</text>{% endfor %}
+      {% for h in [0, 6, 12, 18, 23] %}<text x="{{ 34 + h * 256 / 23 }}" y="134" text-anchor="middle">{{ '%02d'|format(h) }}</text>{% endfor %}
+      <line class="cross" y1="10" y2="120" stroke="var(--axis)" style="display:none"/>
+      <polyline points="{{ p.wind }}" fill="none" stroke="var(--wind)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="{{ p.solar }}" fill="none" stroke="var(--solar)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg></div>{% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>Renewable supply risk</h2>
+  <p class="sub">0 is strong sun and wind; 100 is dark, calm and gusty.
+  Solar shortfall {{ vars.risk_weight_solar }}%, wind shortfall {{ vars.risk_weight_wind }}%, gust hazard {{ vars.risk_weight_gust }}%.</p>
+  <div class="legend"><span>{{ glyph.low }} low, under {{ vars.risk_band_moderate }}</span>
+    <span>{{ glyph.moderate }} moderate, {{ vars.risk_band_moderate }} to {{ vars.risk_band_high - 1 }}</span><span>{{ glyph.high }} high, {{ vars.risk_band_high }} and over</span></div>
+  <div class="scroll"><table class="heat">
+    <thead><tr><th></th>{% for d in dates %}<th>{{ d.strftime('%a') }}<br>{{ day(d) }}</th>{% endfor %}<th>Avg</th></tr></thead>
+    <tbody>{% for o in by_risk %}<tr><td>{{ o.city }}</td>
+      {% for d in dates %}{% set r = grid[o.city][d] %}
+      <td class="cell" tabindex="0" data-tip="{{ num(r.supply_risk_score, 0) }} of 100, {{ r.risk_band }}&#10;{{ o.city }}, {{ day(d) }}&#10;PV {{ num(r.pv_yield_kwh_kwp) }} kWh/kWp, wind {{ pct(r.wind_cf_100m) }}&#10;Peak gust {{ num(r.wind_gust_max_ms, 0) }} m/s"
+        style="background:color-mix(in oklab, var(--{{ r.risk_band }}) {{ {'low': 14, 'moderate': 38, 'high': 55}[r.risk_band] }}%, var(--surface))">{{ glyph[r.risk_band] }} {{ num(r.supply_risk_score, 0) }}</td>
+      {% endfor %}<td><b>{{ num(o.supply_risk_score_avg, 0) }}</b></td></tr>{% endfor %}
+    <tr><td class="conf sub">Confidence</td>{% for d in dates %}<td class="conf sub">{{ confidence[d] }}</td>{% endfor %}<td></td></tr>
+    </tbody></table></div>
+</section>
+
+<section>
+  <details><summary>All daily values ({{ daily|length }} rows)</summary>
+  <div class="scroll"><table>
+    <thead><tr><th>City</th><th>Date</th><th>GHI</th><th>GTI</th><th>PV kWh/kWp</th><th>CF 100 m</th><th>CF 200 m</th><th>W/m² 100 m</th><th>W/m² 200 m</th><th>Gust m/s</th><th>Sun h</th><th>Risk</th><th>Confidence</th></tr></thead>
+    <tbody>{% for r in daily %}<tr><td>{{ r.city }}</td><td>{{ r.local_date }}</td><td>{{ num(r.ghi_kwh_m2, 2) }}</td><td>{{ num(r.gti_kwh_m2, 2) }}</td><td>{{ num(r.pv_yield_kwh_kwp, 2) }}</td><td>{{ pct(r.wind_cf_100m) }}</td><td>{{ pct(r.wind_cf_200m) }}</td><td>{{ num(r.wind_power_density_100m_wm2, 0) }}</td><td>{{ num(r.wind_power_density_200m_wm2, 0) }}</td><td>{{ num(r.wind_gust_max_ms, 0) }}</td><td>{{ num(r.sunshine_hours) }}</td><td>{{ num(r.supply_risk_score, 0) }} {{ r.risk_band }}</td><td>{{ r.forecast_confidence }}</td></tr>{% endfor %}</tbody>
+  </table></div></details>
+</section>
+
+<section>
+  <h2>How to read these numbers</h2>
+  <ul>
+    <li>City-centre forecasts over about two weeks. They compare near-term conditions and are not a site or long-term resource assessment.</li>
+    <li>PV yield = GTI × {{ vars.pv_system_efficiency }} system efficiency, corrected {{ '%.2f'|format(vars.pv_temp_coefficient * 100) }}% per °C of cell temperature above 25 °C.</li>
+    <li>Wind uses a generic power curve: cut-in {{ vars.wind_cut_in }}, rated {{ vars.wind_rated }}, cut-out {{ vars.wind_cut_out }} m/s, corrected for air density. The 200 m figure applies the same turbine at that height.</li>
+    <li>The API returns 100 m and 200 m wind but does not list them in its documentation. The 100 m values track the midpoint of the documented 80 m and 120 m values, so treat both heights as model estimates.</li>
+    <li>Confidence is a label by lead time only: high to 6 days, medium to 10, low beyond.</li>
+  </ul>
+  <p class="sub" style="margin-top:14px">Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a>, CC BY 4.0.</p>
+</section>
+</main>
+<div id="tip" role="status"></div>
+<script>
+const tip = document.getElementById('tip');
+function show(text, x, y) {
+  tip.textContent = text; tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.min(x + 14, innerWidth - r.width - 8) + 'px';
+  tip.style.top = (y + r.height + 20 > innerHeight ? y - r.height - 10 : y + 14) + 'px';
+}
+const hide = () => { tip.style.display = 'none'; };
+document.querySelectorAll('[data-tip]').forEach(el => {
+  el.addEventListener('pointermove', e => show(el.dataset.tip, e.clientX, e.clientY));
+  el.addEventListener('pointerleave', hide);
+  el.addEventListener('focus', () => { const r = el.getBoundingClientRect(); show(el.dataset.tip, r.left, r.bottom); });
+  el.addEventListener('blur', hide);
+});
+document.querySelectorAll('svg[data-values]').forEach(svg => {
+  const rows = JSON.parse(svg.dataset.values), cross = svg.querySelector('.cross');
+  svg.addEventListener('pointermove', e => {
+    const b = svg.getBoundingClientRect(), x = (e.clientX - b.left) / b.width * 300;
+    const h = Math.max(0, Math.min(23, Math.round((x - 34) / 256 * 23))), r = rows.find(v => v[0] === h);
+    if (!r) return hide();
+    const cx = 34 + h * 256 / 23;
+    cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.style.display = '';
+    show(`${svg.dataset.city}, ${String(h).padStart(2, '0')}:00\n${(r[1] * 100).toFixed(0)}% solar\n${(r[2] * 100).toFixed(0)}% wind`, e.clientX, e.clientY);
+  });
+  svg.addEventListener('pointerleave', () => { hide(); cross.style.display = 'none'; });
+});
+</script>
+</body>
+</html>

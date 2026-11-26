@@ -1,0 +1,7 @@
+location_id,city,state_region,country,latitude,longitude,timezone,panel_tilt_deg,panel_azimuth_deg
+melbourne,Melbourne,Victoria,Australia,-37.8136,144.9631,Australia/Melbourne,38,180
+sydney,Sydney,New South Wales,Australia,-33.8688,151.2093,Australia/Sydney,34,180
+brisbane,Brisbane,Queensland,Australia,-27.4698,153.0251,Australia/Brisbane,27,180
+adelaide,Adelaide,South Australia,Australia,-34.9285,138.6007,Australia/Adelaide,35,180
+perth,Perth,Western Australia,Australia,-31.9523,115.8613,Australia/Perth,32,180
+auckland,Auckland,Auckland,New Zealand,-36.8485,174.7633,Pacific/Auckland,37,180
