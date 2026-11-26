@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 import time
+import webbrowser
 
 from . import config
 
@@ -42,6 +43,8 @@ def main() -> int:
     p.add_argument("command", choices=COMMANDS, nargs="?", default="run",
                    help="run = extract, load, build, report (default); "
                         "sample = the same without network, from recorded API responses")
+    p.add_argument("--open", action="store_true",
+                   help="open the report (or dbt docs) in your browser when the run succeeds")
     args = p.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-7s %(message)s",
                         datefmt="%H:%M:%S")
@@ -64,7 +67,24 @@ def main() -> int:
             return 1
         log.info("%s done in %.1fs%s", name, time.perf_counter() - t,
                  f" -> {out}" if out is not None else "")
+
+    if args.open:
+        open_output(args.command, log)
     return 0
+
+
+def open_output(command: str, log: logging.Logger) -> None:
+    """Open the page the command produced. Reached only after every step succeeded."""
+    if command == "docs":
+        page = config.DBT_DIR / "target" / "static_index.html"
+    elif "report" in COMMANDS[command]:
+        page = config.reports_dir() / "energy_outlook.html"
+    else:
+        log.warning("--open: '%s' produces no page to open", command)
+        return
+    log.info("opening %s", page)
+    if not webbrowser.open(page.resolve().as_uri()):
+        log.warning("could not start a browser; open the file above by hand")
 
 
 if __name__ == "__main__":
