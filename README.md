@@ -84,6 +84,7 @@ python3 -m venv .venv
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python -m pipeline run
+start reports\energy_outlook.html 
 ```
 
 On Windows, clone into a short path (under about 90 characters) unless long paths are enabled;
